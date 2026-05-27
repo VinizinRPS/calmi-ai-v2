@@ -6,37 +6,14 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
-)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 conn = sqlite3.connect("calmi.db", check_same_thread=False)
 cursor = conn.cursor()
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    usuario TEXT,
-    senha TEXT
-)
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS conversas (
-    id TEXT,
-    usuario TEXT,
-    nome TEXT
-)
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS mensagens (
-    conversa_id TEXT,
-    tipo TEXT,
-    texto TEXT
-)
-""")
-
+cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT, senha TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS conversas (id TEXT, usuario TEXT, nome TEXT)")
+cursor.execute("CREATE TABLE IF NOT EXISTS mensagens (conversa_id TEXT, tipo TEXT, texto TEXT)")
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS mensagens_memoria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,9 +26,7 @@ CREATE TABLE IF NOT EXISTS mensagens_memoria (
     nivel_emocional TEXT
 )
 """)
-
 conn.commit()
-
 
 def buscar_historico(usuario, limite=20):
     cursor.execute("""
@@ -63,10 +38,8 @@ def buscar_historico(usuario, limite=20):
     """, (usuario, limite))
     return cursor.fetchall()
 
-
 def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
     agora = datetime.now()
-
     cursor.execute("""
         INSERT INTO mensagens_memoria
         (conversa_id, usuario, data, horario, remetente, conteudo, nivel_emocional)
@@ -80,146 +53,90 @@ def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
         conteudo,
         nivel_emocional
     ))
-
     conn.commit()
 
-
 def analisar_risco_emocional(texto, historico):
-    texto_lower = texto.lower()
+    texto = texto.lower()
 
-    leve = ["cansado", "triste", "preocupado", "desanimado", "estressado"]
-
-    moderado = [
-        "ansioso", "ansiedade", "medo", "sozinho", "isolado",
-        "sem energia", "não consigo dormir", "insônia"
-    ]
-
-    elevado = [
-        "desesperança", "não aguento", "muito mal",
-        "sem saída", "colapso", "não consigo continuar"
-    ]
-
-    critico = [
-        "não quero mais viver",
-        "quero sumir",
-        "não vejo saída",
-        "vou me machucar"
-    ]
+    palavras = {
+        "leve": ["cansado", "triste", "preocupado", "desanimado", "estressado"],
+        "moderado": ["ansioso", "ansiedade", "medo", "sozinho", "isolado", "sem energia", "insônia", "não consigo dormir"],
+        "elevado": ["desesperança", "não aguento", "muito mal", "sem saída", "colapso", "não consigo continuar"],
+        "critico": ["não quero mais viver", "quero sumir", "não vejo saída"]
+    }
 
     pontos = 0
 
-    for palavra in leve:
-        if palavra in texto_lower:
+    for p in palavras["leve"]:
+        if p in texto:
             pontos += 1
 
-    for palavra in moderado:
-        if palavra in texto_lower:
+    for p in palavras["moderado"]:
+        if p in texto:
             pontos += 2
 
-    for palavra in elevado:
-        if palavra in texto_lower:
+    for p in palavras["elevado"]:
+        if p in texto:
             pontos += 4
 
-    for palavra in critico:
-        if palavra in texto_lower:
+    for p in palavras["critico"]:
+        if p in texto:
             pontos += 8
 
-    historico_texto = " ".join([
-        h[1].lower()
-        for h in historico
-        if h[0] == "user"
-    ])
+    historico_texto = " ".join([h[1].lower() for h in historico if h[0] == "user"])
 
-    repeticoes = [
-        "triste", "ansioso", "ansiedade", "sozinho",
-        "cansado", "sem energia", "não consigo dormir"
-    ]
-
-    for palavra in repeticoes:
-        if historico_texto.count(palavra) >= 3:
+    for p in ["triste", "ansioso", "sozinho", "cansado", "sem energia", "não consigo dormir"]:
+        if historico_texto.count(p) >= 3:
             pontos += 2
 
     if pontos >= 8:
         return "crítico"
-    elif pontos >= 5:
+    if pontos >= 5:
         return "elevado"
-    elif pontos >= 2:
+    if pontos >= 2:
         return "moderado"
-    else:
-        return "leve"
+    return "leve"
 
-
-def sugerir_profissional(texto, historico, nivel_risco):
-    texto_lower = texto.lower()
+def sugerir_profissional(texto, nivel_risco):
+    texto = texto.lower()
 
     if nivel_risco == "crítico":
-        return {
-            "tipo_profissional": "Ajuda humana imediata",
-            "motivo": "A mensagem indica necessidade de apoio humano imediato.",
-            "urgencia": "crítica"
-        }
+        return "Ajuda humana imediata"
 
-    if "ansiedade" in texto_lower or "ansioso" in texto_lower or "medo" in texto_lower:
-        return {
-            "tipo_profissional": "Psicólogo especializado em ansiedade",
-            "motivo": "Pode ajudar em medo, tensão ou preocupação frequente.",
-            "urgencia": nivel_risco
-        }
+    if "ansiedade" in texto or "ansioso" in texto or "medo" in texto:
+        return "Psicólogo especializado em ansiedade"
 
-    if "família" in texto_lower or "mãe" in texto_lower or "pai" in texto_lower:
-        return {
-            "tipo_profissional": "Psicólogo familiar",
-            "motivo": "Pode ajudar em conflitos ou dificuldades familiares.",
-            "urgencia": nivel_risco
-        }
+    if "família" in texto or "mãe" in texto or "pai" in texto:
+        return "Psicólogo familiar"
 
-    if "escola" in texto_lower or "prova" in texto_lower or "professor" in texto_lower:
-        return {
-            "tipo_profissional": "Psicólogo escolar ou orientador educacional",
-            "motivo": "Pode ajudar em dificuldades emocionais ligadas aos estudos.",
-            "urgencia": nivel_risco
-        }
+    if "escola" in texto or "prova" in texto or "professor" in texto:
+        return "Psicólogo escolar ou orientador educacional"
 
-    if "perdi" in texto_lower or "luto" in texto_lower or "morreu" in texto_lower:
-        return {
-            "tipo_profissional": "Psicólogo especializado em luto",
-            "motivo": "Pode ajudar a lidar com perdas e sofrimento emocional.",
-            "urgencia": nivel_risco
-        }
+    if "luto" in texto or "perdi" in texto or "morreu" in texto:
+        return "Psicólogo especializado em luto"
 
-    return {
-        "tipo_profissional": "Psicólogo clínico",
-        "motivo": "Pode ajudar a compreender sentimentos persistentes.",
-        "urgencia": nivel_risco
-    }
-
+    return "Psicólogo clínico"
 
 def resumir_contexto(historico):
     if not historico:
         return "Sem histórico emocional anterior."
 
-    niveis = [h[2] for h in historico]
-    mensagens_usuario = [h[1] for h in historico if h[0] == "user"]
-
+    textos = [h[1].lower() for h in historico if h[0] == "user"]
     resumo = ""
 
-    if niveis.count("moderado") >= 2 or niveis.count("elevado") >= 1:
-        resumo += "O usuário vem demonstrando sinais emocionais recorrentes. "
+    if any("cansado" in t for t in textos):
+        resumo += "O usuário mencionou cansaço emocional. "
 
-    if any("cansado" in m.lower() for m in mensagens_usuario):
-        resumo += "Há menções de cansaço emocional. "
+    if any("sozinho" in t for t in textos):
+        resumo += "O usuário mencionou solidão ou isolamento. "
 
-    if any("sozinho" in m.lower() for m in mensagens_usuario):
-        resumo += "Há sinais de isolamento ou solidão. "
+    if any("ansioso" in t or "ansiedade" in t for t in textos):
+        resumo += "O usuário mencionou ansiedade ou preocupação. "
 
-    if any("ansioso" in m.lower() or "ansiedade" in m.lower() for m in mensagens_usuario):
-        resumo += "Há sinais de ansiedade ou preocupação frequente. "
-
-    if any("não consigo dormir" in m.lower() or "insônia" in m.lower() for m in mensagens_usuario):
-        resumo += "Há sinais de dificuldade para dormir. "
+    if any("não consigo dormir" in t or "insônia" in t for t in textos):
+        resumo += "O usuário mencionou dificuldade para dormir. "
 
     return resumo if resumo else "Histórico sem padrão emocional forte."
-
 
 HTML = """
 <!DOCTYPE html>
@@ -240,7 +157,9 @@ HTML = """
     --roxo:#4F46E5;
     --roxo2:#7C3AED;
     --azul:#06B6D4;
-    --escuro:#0F172A;
+    --fundo:#0F172A;
+    --card:#111827;
+    --claro:#F8FAFC;
 }
 
 body{
@@ -248,36 +167,35 @@ body{
     height:100vh;
     overflow:hidden;
     background:
-        radial-gradient(circle at top left, rgba(124,58,237,0.55), transparent 34%),
-        radial-gradient(circle at bottom right, rgba(6,182,212,0.45), transparent 34%),
+        radial-gradient(circle at top left, rgba(124,58,237,.55), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(6,182,212,.45), transparent 35%),
         linear-gradient(135deg,#0F172A,#111827);
 }
 
 .container{
-    display:flex;
-    width:100%;
     height:100vh;
-    padding:18px;
+    width:100%;
+    display:flex;
     gap:18px;
+    padding:18px;
 }
 
 .sidebar{
     width:310px;
-    background:rgba(17,24,39,0.82);
+    background:rgba(17,24,39,.88);
     color:white;
+    border-radius:28px;
+    padding:18px;
     display:flex;
     flex-direction:column;
-    padding:18px;
-    border-radius:28px;
-    border:1px solid rgba(255,255,255,0.09);
-    box-shadow:0 25px 70px rgba(0,0,0,0.35);
-    backdrop-filter:blur(18px);
+    box-shadow:0 25px 70px rgba(0,0,0,.35);
+    backdrop-filter:blur(16px);
 }
 
 .logo{
     text-align:center;
     padding:18px;
-    border-bottom:1px solid rgba(255,255,255,0.08);
+    border-bottom:1px solid rgba(255,255,255,.1);
 }
 
 .logo h1{
@@ -289,16 +207,16 @@ body{
 
 .logo p{
     color:#CBD5E1;
-    margin-top:6px;
     font-size:14px;
+    margin-top:5px;
 }
 
 .profile{
+    margin-top:18px;
     display:flex;
     align-items:center;
     gap:12px;
-    margin-top:18px;
-    background:rgba(31,41,55,0.9);
+    background:rgba(31,41,55,.9);
     padding:13px;
     border-radius:20px;
 }
@@ -309,15 +227,15 @@ body{
     border-radius:50%;
     background:linear-gradient(135deg,var(--roxo),var(--azul));
     display:flex;
-    justify-content:center;
     align-items:center;
+    justify-content:center;
     font-weight:bold;
     font-size:22px;
 }
 
 .status{
-    font-size:12px;
     color:#86EFAC;
+    font-size:12px;
     margin-top:4px;
 }
 
@@ -326,28 +244,33 @@ body{
     margin-top:20px;
     padding:15px;
     border:none;
+    border-radius:17px;
     background:linear-gradient(135deg,var(--roxo),var(--roxo2));
     color:white;
-    border-radius:17px;
-    cursor:pointer;
     font-weight:bold;
+    cursor:pointer;
 }
 
 .chats{
     flex:1;
     overflow-y:auto;
     margin-top:20px;
+    padding-right:4px;
 }
 
 .chat-item{
-    background:rgba(31,41,55,0.92);
+    background:rgba(31,41,55,.95);
+    color:#E5E7EB;
     padding:13px 42px 13px 13px;
     border-radius:16px;
     margin-bottom:10px;
     cursor:pointer;
     position:relative;
-    color:#E5E7EB;
     font-size:14px;
+}
+
+.chat-item:hover{
+    background:#374151;
 }
 
 .delete-btn{
@@ -355,9 +278,9 @@ body{
     right:10px;
     top:50%;
     transform:translateY(-50%);
-    border:none;
     width:24px;
     height:24px;
+    border:none;
     border-radius:50%;
     background:#EF4444;
     color:white;
@@ -368,15 +291,15 @@ body{
     flex:1;
     display:flex;
     flex-direction:column;
-    background:rgba(248,250,252,0.92);
+    background:rgba(248,250,252,.94);
     border-radius:28px;
     overflow:hidden;
-    box-shadow:0 25px 70px rgba(0,0,0,0.25);
+    box-shadow:0 25px 70px rgba(0,0,0,.25);
 }
 
 .top{
     padding:20px 24px;
-    background:rgba(255,255,255,0.86);
+    background:rgba(255,255,255,.9);
     display:flex;
     justify-content:space-between;
     align-items:center;
@@ -392,13 +315,18 @@ body{
     margin-top:4px;
 }
 
+.top-actions{
+    display:flex;
+    gap:8px;
+}
+
 .tema-btn,
 .mobile-history-btn{
     border:none;
+    padding:11px 14px;
+    border-radius:14px;
     background:#111827;
     color:white;
-    padding:11px 16px;
-    border-radius:15px;
     cursor:pointer;
 }
 
@@ -415,6 +343,7 @@ body{
     flex:1;
     overflow-y:auto;
     padding:24px;
+    padding-bottom:24px;
 }
 
 .message{
@@ -423,7 +352,8 @@ body{
     border-radius:18px;
     margin-bottom:14px;
     line-height:1.5;
-    animation:msgIn 0.25s ease;
+    animation:msgIn .25s ease;
+    word-wrap:break-word;
 }
 
 @keyframes msgIn{
@@ -438,14 +368,15 @@ body{
 }
 
 .user{
-    background:linear-gradient(135deg,var(--roxo),var(--roxo2));
-    color:white;
     margin-left:auto;
+    color:white;
+    background:linear-gradient(135deg,var(--roxo),var(--roxo2));
 }
 
 .bot{
     background:white;
-    color:#111;
+    color:#111827;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
 }
 
 .typing{
@@ -456,52 +387,54 @@ body{
 .dot{
     width:7px;
     height:7px;
-    background:#7C3AED;
     border-radius:50%;
+    background:#7C3AED;
     animation:dot 1s infinite ease-in-out;
 }
 
-.dot:nth-child(2){
-    animation-delay:0.15s;
-}
-
-.dot:nth-child(3){
-    animation-delay:0.3s;
-}
+.dot:nth-child(2){animation-delay:.15s;}
+.dot:nth-child(3){animation-delay:.3s;}
 
 @keyframes dot{
     0%,80%,100%{
-        transform:scale(0.7);
-        opacity:0.4;
+        opacity:.4;
+        transform:scale(.7);
     }
     40%{
-        transform:scale(1);
         opacity:1;
+        transform:scale(1);
     }
 }
 
 .input-area{
     display:flex;
     gap:10px;
-    padding:16px;
+    padding:14px;
     background:white;
+    border-top:1px solid rgba(0,0,0,.06);
+    width:100%;
 }
 
 .input-area input{
     flex:1;
-    padding:15px;
+    min-width:0;
+    padding:14px;
     border:none;
     border-radius:15px;
     background:#F1F5F9;
+    font-size:15px;
+    outline:none;
 }
 
 .input-area button{
     border:none;
-    padding:15px 25px;
+    padding:14px 22px;
     border-radius:15px;
     background:linear-gradient(135deg,var(--azul),var(--roxo));
     color:white;
+    font-weight:bold;
     cursor:pointer;
+    white-space:nowrap;
 }
 
 .dark .main{
@@ -523,26 +456,27 @@ body{
     background:#1F2937;
     color:white;
 }
+
 .login{
     position:fixed;
     inset:0;
-    background:
-        radial-gradient(circle at top left,#7C3AED,transparent 34%),
-        radial-gradient(circle at bottom right,#06B6D4,transparent 34%),
-        #0F172A;
     display:flex;
-    justify-content:center;
     align-items:center;
+    justify-content:center;
     z-index:999;
+    background:
+        radial-gradient(circle at top left,#7C3AED,transparent 35%),
+        radial-gradient(circle at bottom right,#06B6D4,transparent 35%),
+        #0F172A;
 }
 
 .login-box{
     width:420px;
-    background:rgba(255,255,255,0.92);
+    background:rgba(255,255,255,.94);
     padding:38px;
     border-radius:30px;
     text-align:center;
-    box-shadow:0 35px 90px rgba(0,0,0,0.35);
+    box-shadow:0 35px 90px rgba(0,0,0,.35);
 }
 
 .login-box h1{
@@ -564,6 +498,7 @@ body{
     background:#F1F5F9;
     border-radius:16px;
     margin-top:12px;
+    outline:none;
 }
 
 .login-box button{
@@ -587,8 +522,8 @@ body{
 
     .container{
         height:100vh;
-        padding:0;
         display:block;
+        padding:0;
     }
 
     .sidebar{
@@ -616,8 +551,8 @@ body{
 
     .mobile-history-btn{
         display:block;
-        padding:10px 12px;
         font-size:13px;
+        padding:10px 12px;
     }
 
     .mobile-history{
@@ -633,7 +568,7 @@ body{
         z-index:999;
         padding:15px;
         border-radius:18px;
-        box-shadow:0 20px 50px rgba(0,0,0,0.35);
+        box-shadow:0 20px 50px rgba(0,0,0,.35);
     }
 
     .mobile-history.open{
@@ -642,6 +577,7 @@ body{
 
     .chat{
         padding:14px;
+        padding-bottom:86px;
     }
 
     .message{
@@ -652,8 +588,19 @@ body{
     }
 
     .input-area{
+        position:fixed;
+        bottom:0;
+        left:0;
+        right:0;
+        z-index:60;
         padding:10px;
         gap:8px;
+        background:white;
+        box-shadow:0 -8px 25px rgba(0,0,0,.12);
+    }
+
+    .dark .input-area{
+        background:#111827;
     }
 
     .input-area input{
@@ -708,7 +655,6 @@ body{
 
         <div class="profile">
             <div class="avatar" id="avatar">C</div>
-
             <div>
                 <h3 id="nomeUsuario">Usuário</h3>
                 <div class="status">● Online</div>
@@ -730,8 +676,10 @@ body{
                 <div class="subtitle">O Calmi está aqui para te ouvir 💙</div>
             </div>
 
-            <button class="mobile-history-btn" onclick="toggleHistoricoMobile()">☰ Histórico</button>
-            <button class="tema-btn" onclick="toggleTema()">🌙</button>
+            <div class="top-actions">
+                <button class="mobile-history-btn" onclick="toggleHistoricoMobile()">☰</button>
+                <button class="tema-btn" onclick="toggleTema()">🌙</button>
+            </div>
         </div>
 
         <div class="chat" id="chat">
@@ -742,12 +690,11 @@ body{
         </div>
 
         <div class="input-area">
-            <input id="mensagem" placeholder="Digite aqui...">
-            <button onclick="enviarMensagem()">Enviar</button>
+            <input type="text" id="mensagem" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button type="button" onclick="enviarMensagem()">Enviar</button>
         </div>
 
     </div>
-
 </div>
 
 <script>
@@ -791,9 +738,7 @@ function login(){
 
 function novaConversa(){
     conversaAtual=crypto.randomUUID();
-
     document.getElementById("titulo").innerText="Nova conversa";
-
     document.getElementById("chat").innerHTML=`
         <div class="message bot">
             Olá 😊 Eu sou o Calmi.<br><br>
@@ -845,7 +790,7 @@ async function enviarMensagem(){
 
     botDiv.innerHTML="";
 
-    let texto=dados.resposta;
+    let texto=dados.resposta || "Não consegui responder agora.";
     let i=0;
 
     let intervalo=setInterval(()=>{
@@ -908,6 +853,8 @@ function abrirConversa(id){
                 </div>
             `;
         });
+
+        chat.scrollTop=chat.scrollHeight;
     });
 }
 
@@ -937,7 +884,6 @@ def home():
 @app.route("/login", methods=["POST"])
 def login():
     dados=request.get_json()
-
     usuario=dados["usuario"]
     senha=dados["senha"]
 
@@ -957,7 +903,6 @@ def login():
 
     return jsonify({"status":"ok"})
 
-
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -969,14 +914,10 @@ def chat():
 
         historico=buscar_historico(usuario)
         risco=analisar_risco_emocional(mensagem,historico)
-        profissional=sugerir_profissional(mensagem,historico,risco)
+        profissional=sugerir_profissional(mensagem,risco)
         contexto=resumir_contexto(historico)
 
-        cursor.execute(
-            "SELECT * FROM conversas WHERE id=?",
-            (conversa,)
-        )
-
+        cursor.execute("SELECT * FROM conversas WHERE id=?", (conversa,))
         existe=cursor.fetchone()
 
         if not existe:
@@ -1009,8 +950,8 @@ Contexto emocional recente:
 Nível emocional detectado:
 {risco}
 
-Sugestão profissional:
-{profissional["tipo_profissional"]}
+Sugestão de apoio:
+{profissional}
 
 Regras:
 - Seja acolhedor.
@@ -1018,6 +959,7 @@ Regras:
 - Não substitua terapia.
 - Fale em português brasileiro.
 - Responda de forma curta, humana e natural.
+- Em risco elevado, recomende apoio profissional com calma.
 
 Mensagem:
 {mensagem}
@@ -1036,8 +978,7 @@ Mensagem:
             if risco=="elevado":
                 resposta_texto+=(
                     "<br><br>💙 Pode ser útil conversar com "
-                    f"{profissional['tipo_profissional']}. "
-                    "Você merece apoio de verdade."
+                    f"{profissional}. Você merece apoio de verdade."
                 )
 
         cursor.execute(
@@ -1055,7 +996,6 @@ Mensagem:
         print(erro)
         return jsonify({"resposta":"Erro ao conectar com a IA 😔"})
 
-
 @app.route("/conversas/<usuario>")
 def listar_conversas(usuario):
     cursor.execute(
@@ -1064,7 +1004,6 @@ def listar_conversas(usuario):
     )
 
     resultados=cursor.fetchall()
-
     lista=[]
 
     for conversa in resultados:
@@ -1075,7 +1014,6 @@ def listar_conversas(usuario):
 
     return jsonify(lista)
 
-
 @app.route("/abrir/<id>")
 def abrir(id):
     cursor.execute(
@@ -1084,7 +1022,6 @@ def abrir(id):
     )
 
     mensagens=cursor.fetchall()
-
     lista=[]
 
     for msg in mensagens:
@@ -1094,7 +1031,6 @@ def abrir(id):
         })
 
     return jsonify({"mensagens":lista})
-
 
 @app.route("/deletar/<id>")
 def deletar(id):
@@ -1111,7 +1047,6 @@ def deletar(id):
     conn.commit()
 
     return jsonify({"status":"ok"})
-
 
 if __name__=="__main__":
     app.run(debug=True)
