@@ -6,7 +6,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 conn = sqlite3.connect("calmi.db", check_same_thread=False)
 cursor = conn.cursor()
@@ -14,6 +15,7 @@ cursor = conn.cursor()
 cursor.execute("CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT, senha TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS conversas (id TEXT, usuario TEXT, nome TEXT)")
 cursor.execute("CREATE TABLE IF NOT EXISTS mensagens (conversa_id TEXT, tipo TEXT, texto TEXT)")
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS mensagens_memoria (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +28,9 @@ CREATE TABLE IF NOT EXISTS mensagens_memoria (
     nivel_emocional TEXT
 )
 """)
+
 conn.commit()
+
 
 def buscar_historico(usuario, limite=20):
     cursor.execute("""
@@ -38,8 +42,10 @@ def buscar_historico(usuario, limite=20):
     """, (usuario, limite))
     return cursor.fetchall()
 
+
 def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
     agora = datetime.now()
+
     cursor.execute("""
         INSERT INTO mensagens_memoria
         (conversa_id, usuario, data, horario, remetente, conteudo, nivel_emocional)
@@ -53,40 +59,57 @@ def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
         conteudo,
         nivel_emocional
     ))
+
     conn.commit()
+
 
 def analisar_risco_emocional(texto, historico):
     texto = texto.lower()
 
-    palavras = {
-        "leve": ["cansado", "triste", "preocupado", "desanimado", "estressado"],
-        "moderado": ["ansioso", "ansiedade", "medo", "sozinho", "isolado", "sem energia", "insônia", "não consigo dormir"],
-        "elevado": ["desesperança", "não aguento", "muito mal", "sem saída", "colapso", "não consigo continuar"],
-        "critico": ["não quero mais viver", "quero sumir", "não vejo saída"]
-    }
+    leve = ["cansado", "triste", "preocupado", "desanimado", "estressado"]
+
+    moderado = [
+        "ansioso", "ansiedade", "medo", "sozinho", "isolado",
+        "sem energia", "insônia", "não consigo dormir"
+    ]
+
+    elevado = [
+        "desesperança", "não aguento", "muito mal",
+        "sem saída", "colapso", "não consigo continuar"
+    ]
+
+    critico = [
+        "não quero mais viver",
+        "quero sumir",
+        "não vejo saída"
+    ]
 
     pontos = 0
 
-    for p in palavras["leve"]:
-        if p in texto:
+    for palavra in leve:
+        if palavra in texto:
             pontos += 1
 
-    for p in palavras["moderado"]:
-        if p in texto:
+    for palavra in moderado:
+        if palavra in texto:
             pontos += 2
 
-    for p in palavras["elevado"]:
-        if p in texto:
+    for palavra in elevado:
+        if palavra in texto:
             pontos += 4
 
-    for p in palavras["critico"]:
-        if p in texto:
+    for palavra in critico:
+        if palavra in texto:
             pontos += 8
 
-    historico_texto = " ".join([h[1].lower() for h in historico if h[0] == "user"])
+    historico_texto = " ".join([
+        h[1].lower()
+        for h in historico
+        if h[0] == "user"
+    ])
 
-    for p in ["triste", "ansioso", "sozinho", "cansado", "sem energia", "não consigo dormir"]:
-        if historico_texto.count(p) >= 3:
+    for palavra in ["triste", "ansioso", "sozinho", "cansado", "sem energia", "não consigo dormir"]:
+        if historico_texto.count(palavra) >= 3:
             pontos += 2
 
     if pontos >= 8:
@@ -96,6 +119,7 @@ def analisar_risco_emocional(texto, historico):
     if pontos >= 2:
         return "moderado"
     return "leve"
+
 
 def sugerir_profissional(texto, nivel_risco):
     texto = texto.lower()
@@ -116,6 +140,7 @@ def sugerir_profissional(texto, nivel_risco):
         return "Psicólogo especializado em luto"
 
     return "Psicólogo clínico"
+
 
 def resumir_contexto(historico):
     if not historico:
@@ -138,6 +163,7 @@ def resumir_contexto(historico):
 
     return resumo if resumo else "Histórico sem padrão emocional forte."
 
+
 HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -158,8 +184,6 @@ HTML = """
     --roxo2:#7C3AED;
     --azul:#06B6D4;
     --fundo:#0F172A;
-    --card:#111827;
-    --claro:#F8FAFC;
 }
 
 body{
@@ -321,7 +345,7 @@ body{
 }
 
 .tema-btn,
-.mobile-history-btn{
+.mobile-menu-btn{
     border:none;
     padding:11px 14px;
     border-radius:14px;
@@ -330,12 +354,12 @@ body{
     cursor:pointer;
 }
 
-.mobile-history-btn{
+.mobile-menu-btn{
     display:none;
     background:linear-gradient(135deg,var(--roxo),var(--azul));
 }
 
-.mobile-history{
+.mobile-menu{
     display:none;
 }
 
@@ -343,7 +367,6 @@ body{
     flex:1;
     overflow-y:auto;
     padding:24px;
-    padding-bottom:24px;
 }
 
 .message{
@@ -549,30 +572,63 @@ body{
         font-size:12px;
     }
 
-    .mobile-history-btn{
+    .mobile-menu-btn{
         display:block;
-        font-size:13px;
+        font-size:15px;
         padding:10px 12px;
     }
 
-    .mobile-history{
-        display:none;
+    .mobile-menu{
+        display:flex;
+        flex-direction:column;
         position:fixed;
-        top:72px;
-        left:10px;
-        right:10px;
-        max-height:55vh;
-        overflow-y:auto;
+        top:0;
+        left:-86%;
+        width:84%;
+        height:100vh;
         background:#111827;
         color:white;
-        z-index:999;
-        padding:15px;
-        border-radius:18px;
-        box-shadow:0 20px 50px rgba(0,0,0,.35);
+        z-index:1000;
+        padding:18px;
+        transition:.3s ease;
+        box-shadow:20px 0 60px rgba(0,0,0,.45);
     }
 
-    .mobile-history.open{
-        display:block;
+    .mobile-menu.open{
+        left:0;
+    }
+
+    .mobile-menu-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:18px;
+    }
+
+    .mobile-menu-header h2{
+        color:#60A5FA;
+    }
+
+    .mobile-menu-header button{
+        border:none;
+        width:34px;
+        height:34px;
+        border-radius:50%;
+        background:#EF4444;
+        color:white;
+        cursor:pointer;
+    }
+
+    .mobile-new-chat{
+        width:100%;
+        padding:14px;
+        border:none;
+        border-radius:14px;
+        background:linear-gradient(135deg,var(--roxo),var(--azul));
+        color:white;
+        font-weight:bold;
+        margin-bottom:20px;
+        cursor:pointer;
     }
 
     .chat{
@@ -639,9 +695,19 @@ body{
     </div>
 </div>
 
-<div class="mobile-history" id="mobileHistory">
-    <h3>Conversas</h3>
+<div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+        <h2>Calmi</h2>
+        <button onclick="toggleMenuMobile()">✕</button>
+    </div>
+
+    <button class="mobile-new-chat" onclick="novaConversaMobile()">
+        + Nova conversa
+    </button>
+
+    <h3>Histórico</h3>
     <br>
+
     <div id="listaChatsMobile"></div>
 </div>
 
@@ -677,7 +743,7 @@ body{
             </div>
 
             <div class="top-actions">
-                <button class="mobile-history-btn" onclick="toggleHistoricoMobile()">☰</button>
+                <button class="mobile-menu-btn" onclick="toggleMenuMobile()">☰</button>
                 <button class="tema-btn" onclick="toggleTema()">🌙</button>
             </div>
         </div>
@@ -705,8 +771,8 @@ function toggleTema(){
     document.body.classList.toggle("dark");
 }
 
-function toggleHistoricoMobile(){
-    document.getElementById("mobileHistory").classList.toggle("open");
+function toggleMenuMobile(){
+    document.getElementById("mobileMenu").classList.toggle("open");
 }
 
 function login(){
@@ -745,6 +811,11 @@ function novaConversa(){
             Como você está se sentindo hoje?
         </div>
     `;
+}
+
+function novaConversaMobile(){
+    novaConversa();
+    document.getElementById("mobileMenu").classList.remove("open");
 }
 
 async function enviarMensagem(){
@@ -841,7 +912,7 @@ function abrirConversa(id){
     .then(dados=>{
         conversaAtual=id;
 
-        document.getElementById("mobileHistory").classList.remove("open");
+        document.getElementById("mobileMenu").classList.remove("open");
 
         let chat=document.getElementById("chat");
         chat.innerHTML="";
@@ -906,6 +977,11 @@ def login():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        if client is None:
+            return jsonify({
+                "resposta":"A API da Groq não foi configurada. Configure a variável GROQ_API_KEY."
+            })
+
         dados=request.get_json()
 
         usuario=dados["usuario"]
