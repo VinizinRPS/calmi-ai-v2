@@ -61,7 +61,7 @@ HTML = """
 }
 
 body{
-    font-family:Arial;
+    font-family:Arial, Helvetica, sans-serif;
     height:100vh;
     overflow:hidden;
     background:#0F172A;
@@ -85,7 +85,6 @@ body{
 .logo{
     text-align:center;
     padding:15px;
-    border-bottom:1px solid rgba(255,255,255,0.1);
 }
 
 .logo h1{
@@ -95,7 +94,6 @@ body{
 
 .logo p{
     color:#9CA3AF;
-    margin-top:5px;
 }
 
 .profile{
@@ -128,13 +126,7 @@ body{
     color:white;
     border-radius:12px;
     cursor:pointer;
-    transition:0.3s;
     font-weight:bold;
-}
-
-.new-chat button:hover{
-    transform:scale(1.02);
-    background:#4338CA;
 }
 
 .chats{
@@ -149,12 +141,7 @@ body{
     border-radius:12px;
     margin-bottom:10px;
     cursor:pointer;
-    transition:0.3s;
     position:relative;
-}
-
-.chat-item:hover{
-    background:#374151;
 }
 
 .delete-btn{
@@ -183,11 +170,15 @@ body{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    border-bottom:1px solid #ddd;
 }
 
 .top h2{
     color:#4F46E5;
+}
+
+.subtitle{
+    color:#64748B;
+    font-size:13px;
 }
 
 .tema-btn{
@@ -231,7 +222,6 @@ body{
     gap:10px;
     padding:15px;
     background:white;
-    border-top:1px solid #ddd;
 }
 
 .input-area input{
@@ -260,7 +250,6 @@ body{
 .dark .top{
     background:#111827;
     color:white;
-    border:none;
 }
 
 .dark .bot{
@@ -270,7 +259,6 @@ body{
 
 .dark .input-area{
     background:#111827;
-    border:none;
 }
 
 .dark .input-area input{
@@ -338,6 +326,79 @@ body{
         transform:translateY(0px);
     }
 }
+
+/* CELULAR */
+
+@media(max-width:800px){
+
+    body{
+        overflow:auto;
+        background:#0F172A;
+    }
+
+    .container{
+        height:100vh;
+        padding:0;
+        display:block;
+    }
+
+    .sidebar{
+        display:none;
+    }
+
+    .main{
+        width:100%;
+        height:100vh;
+        border-radius:0;
+    }
+
+    .top{
+        padding:16px;
+    }
+
+    .top h2{
+        font-size:20px;
+    }
+
+    .subtitle{
+        font-size:12px;
+    }
+
+    .chat{
+        padding:14px;
+    }
+
+    .message{
+        max-width:90%;
+        font-size:14px;
+        padding:13px;
+        border-radius:16px;
+    }
+
+    .input-area{
+        padding:10px;
+        gap:8px;
+    }
+
+    .input-area input{
+        padding:13px;
+        font-size:14px;
+    }
+
+    .input-area button{
+        padding:13px 16px;
+        font-size:14px;
+    }
+
+    .login-box{
+        width:90%;
+        padding:28px;
+    }
+
+    .login-box h1{
+        font-size:46px;
+    }
+}
 </style>
 </head>
 
@@ -379,7 +440,11 @@ body{
 
     <div class="main">
         <div class="top">
-            <h2 id="titulo">Nova conversa</h2>
+            <div>
+                <h2 id="titulo">Nova conversa</h2>
+                <div class="subtitle">O Calmi está aqui para te ouvir.</div>
+            </div>
+
             <button class="tema-btn" onclick="toggleTema()">🌙</button>
         </div>
 
@@ -409,6 +474,11 @@ function toggleTema(){
 function login(){
     let usuario = document.getElementById("usuario").value;
     let senha = document.getElementById("senha").value;
+
+    if(usuario.trim() === "" || senha.trim() === ""){
+        alert("Preencha usuário e senha.");
+        return;
+    }
 
     fetch("/login", {
         method:"POST",
@@ -631,7 +701,7 @@ def chat():
             )
         )
 
-        palavras_tristeza = [
+        palavras_emocao = [
             "triste",
             "sozinho",
             "depressivo",
@@ -640,10 +710,11 @@ def chat():
             "ansiedade",
             "medo",
             "raiva",
-            "cansado"
+            "cansado",
+            "preocupado"
         ]
 
-        if any(p in mensagem.lower() for p in palavras_tristeza):
+        if any(p in mensagem.lower() for p in palavras_emocao):
             cursor.execute(
                 "INSERT INTO memoria VALUES (?, ?)",
                 (
@@ -668,11 +739,10 @@ def chat():
 
         resposta = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-
             messages=[
                 {
                     "role":"system",
-                    "content":f"""
+                    "content":f'''
 Você é o Calmi.
 
 Uma IA emocional acolhedora.
@@ -689,7 +759,7 @@ Regras:
 
 Memórias do usuário:
 {contexto}
-"""
+'''
                 },
                 {
                     "role":"user",
