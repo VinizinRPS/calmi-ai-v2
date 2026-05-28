@@ -1,9 +1,12 @@
-from flask import Flask, request, jsonify, render_template_string, session
+from flask import Flask, request, jsonify, render_template_string, session, Response
 from groq import Groq
 import psycopg2
 import psycopg2.extras
 import os
 import base64
+import json
+import urllib.request
+import urllib.error
 from datetime import datetime
 
 app = Flask(__name__)
@@ -12,6 +15,8 @@ app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # limite de 12MB para image
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID")
 
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -2605,26 +2610,109 @@ document.getElementById("mensagem")
 });
 
 
-function falarTexto(texto){
-    if(!('speechSynthesis' in window)){
-        alert('Seu navegador não suporta leitura em voz alta.');
-        return;
-    }
-    speechSynthesis.cancel();
-    let fala = new SpeechSynthesisUtterance(texto.replace(/<br>/g,' ').replace(/<[^>]*>/g,''));
-    fala.lang = 'pt-BR';
-    fala.rate = 1;
-    speechSynthesis.speak(fala);
+let audioRespostaAtual = null;
+let botaoAudioAtual = null;
+let audioUrlAtual = null;
+
+function limparTextoParaAudio(texto){
+    let div = document.createElement("div");
+    div.innerHTML = texto;
+    return (div.textContent || div.innerText || "").trim();
 }
 
-function falarTextoCodificado(textoCodificado){
+function resetarBotaoAudio(botao){
+    if(botao){
+        botao.innerHTML = "🔊 Ouvir resposta";
+        botao.classList.remove("listening");
+    }
+}
+
+function pararAudioAtual(){
+    if(audioRespostaAtual){
+        audioRespostaAtual.pause();
+        audioRespostaAtual.currentTime = 0;
+        audioRespostaAtual = null;
+    }
+
+    if(audioUrlAtual){
+        URL.revokeObjectURL(audioUrlAtual);
+        audioUrlAtual = null;
+    }
+
+    resetarBotaoAudio(botaoAudioAtual);
+    botaoAudioAtual = null;
+
+    if("speechSynthesis" in window){
+        speechSynthesis.cancel();
+    }
+}
+
+async function ouvirRespostaCodificada(textoCodificado, botao){
     let texto = decodeURIComponent(escape(atob(textoCodificado)));
-    falarTexto(texto);
+    texto = limparTextoParaAudio(texto);
+
+    if(botaoAudioAtual === botao && audioRespostaAtual){
+        pararAudioAtual();
+        return;
+    }
+
+    pararAudioAtual();
+
+    botaoAudioAtual = botao;
+    botao.innerHTML = "⏹ Parar de ouvir";
+    botao.classList.add("listening");
+
+    try{
+        let resposta = await fetch("/tts", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({texto:texto})
+        });
+
+        if(!resposta.ok){
+            throw new Error("Falha no TTS");
+        }
+
+        let blob = await resposta.blob();
+        audioUrlAtual = URL.createObjectURL(blob);
+        audioRespostaAtual = new Audio(audioUrlAtual);
+
+        audioRespostaAtual.onended = () => {
+            pararAudioAtual();
+        };
+
+        audioRespostaAtual.onerror = () => {
+            pararAudioAtual();
+            alert("Não foi possível reproduzir o áudio agora.");
+        };
+
+        await audioRespostaAtual.play();
+
+    }catch(erro){
+        console.log(erro);
+
+        if("speechSynthesis" in window){
+            let fala = new SpeechSynthesisUtterance(texto);
+            fala.lang = "pt-BR";
+            fala.rate = 0.95;
+
+            fala.onend = () => {
+                resetarBotaoAudio(botao);
+                botaoAudioAtual = null;
+            };
+
+            speechSynthesis.speak(fala);
+        }else{
+            resetarBotaoAudio(botao);
+            botaoAudioAtual = null;
+            alert("Seu navegador não conseguiu tocar a resposta.");
+        }
+    }
 }
 
 function adicionarBotaoVoz(el, texto){
     let safe = btoa(unescape(encodeURIComponent(texto)));
-    el.innerHTML += `<br><button class="speak-btn" onclick="falarTextoCodificado('${safe}')">🔊 Ouvir resposta</button>`;
+    el.innerHTML += `<br><button class="speak-btn" onclick="ouvirRespostaCodificada('${safe}', this)">🔊 Ouvir resposta</button>`;
 }
 
 function toggleNotas(){
@@ -2705,6 +2793,62 @@ verificarSessao();
 def home():
     return render_template_string(HTML)
 
+
+
+@app.route("/tts", methods=["POST"])
+def gerar_audio_tts():
+    try:
+        if not ELEVENLABS_API_KEY:
+            return jsonify({"erro": "ELEVENLABS_API_KEY não configurada."}), 500
+
+        if not ELEVENLABS_VOICE_ID:
+            return jsonify({"erro": "ELEVENLABS_VOICE_ID não configurada."}), 500
+
+        dados = request.get_json() or {}
+        texto = (dados.get("texto") or "").strip()
+
+        if not texto:
+            return jsonify({"erro": "Texto vazio."}), 400
+
+        if len(texto) > 2500:
+            texto = texto[:2500]
+
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+
+        payload = {
+            "text": texto,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.45,
+                "similarity_boost": 0.8,
+                "style": 0.25,
+                "use_speaker_boost": True
+            }
+        }
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "xi-api-key": ELEVENLABS_API_KEY,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg"
+            },
+            method="POST"
+        )
+
+        with urllib.request.urlopen(req, timeout=45) as resposta:
+            audio = resposta.read()
+
+        return Response(audio, mimetype="audio/mpeg")
+
+    except urllib.error.HTTPError as erro:
+        print("Erro ElevenLabs:", erro.read().decode("utf-8", errors="ignore"))
+        return jsonify({"erro": "Erro ao gerar voz com ElevenLabs."}), 500
+
+    except Exception as erro:
+        print("Erro TTS:", erro)
+        return jsonify({"erro": "Erro ao gerar voz."}), 500
 
 @app.route("/session")
 def verificar_session():
