@@ -7,6 +7,7 @@ import base64
 import json
 import urllib.request
 import urllib.error
+import html as html_lib
 from datetime import datetime
 
 app = Flask(__name__)
@@ -2562,6 +2563,21 @@ function carregarConversas(){
     });
 }
 
+function renderizarMensagemSalva(msg){
+
+    let chat = document.getElementById("chat");
+
+    let div = document.createElement("div");
+    div.className = `message ${msg.tipo}`;
+    div.innerHTML = msg.texto;
+
+    chat.appendChild(div);
+
+    if(msg.tipo === "bot" && !div.querySelector(".speak-btn")){
+        adicionarBotaoVoz(div, msg.texto);
+    }
+}
+
 function abrirConversa(id){
 
     fetch("/abrir/" + id)
@@ -2577,12 +2593,7 @@ function abrirConversa(id){
         chat.innerHTML = "";
 
         dados.mensagens.forEach(msg => {
-
-            chat.innerHTML += `
-                <div class="message ${msg.tipo}">
-                    ${msg.texto}
-                </div>
-            `;
+            renderizarMensagemSalva(msg);
         });
 
         chat.scrollTop = chat.scrollHeight;
@@ -2613,9 +2624,6 @@ document.getElementById("mensagem")
 let audioRespostaAtual = null;
 let botaoAudioAtual = null;
 let audioUrlAtual = null;
-let ttsAbortController = null;
-let audioCarregando = false;
-let falaNavegadorAtual = null;
 
 function limparTextoParaAudio(texto){
     let div = document.createElement("div");
@@ -2627,18 +2635,10 @@ function resetarBotaoAudio(botao){
     if(botao){
         botao.innerHTML = "🔊 Ouvir resposta";
         botao.classList.remove("listening");
-        botao.disabled = false;
     }
 }
 
 function pararAudioAtual(){
-    if(ttsAbortController){
-        ttsAbortController.abort();
-        ttsAbortController = null;
-    }
-
-    audioCarregando = false;
-
     if(audioRespostaAtual){
         audioRespostaAtual.pause();
         audioRespostaAtual.currentTime = 0;
@@ -2650,42 +2650,34 @@ function pararAudioAtual(){
         audioUrlAtual = null;
     }
 
+    resetarBotaoAudio(botaoAudioAtual);
+    botaoAudioAtual = null;
+
     if("speechSynthesis" in window){
         speechSynthesis.cancel();
     }
-
-    falaNavegadorAtual = null;
-
-    resetarBotaoAudio(botaoAudioAtual);
-    botaoAudioAtual = null;
 }
 
 async function ouvirRespostaCodificada(textoCodificado, botao){
     let texto = decodeURIComponent(escape(atob(textoCodificado)));
     texto = limparTextoParaAudio(texto);
 
-    // Se clicar no mesmo botão enquanto está carregando ou tocando, para tudo.
-    if(botaoAudioAtual === botao && (audioCarregando || audioRespostaAtual || falaNavegadorAtual)){
+    if(botaoAudioAtual === botao && audioRespostaAtual){
         pararAudioAtual();
         return;
     }
 
-    // Se outro áudio estiver tocando, para antes de começar outro.
     pararAudioAtual();
 
     botaoAudioAtual = botao;
-    audioCarregando = true;
-    botao.innerHTML = "⏳ Carregando voz...";
+    botao.innerHTML = "⏹ Parar de ouvir";
     botao.classList.add("listening");
 
     try{
-        ttsAbortController = new AbortController();
-
         let resposta = await fetch("/tts", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({texto:texto}),
-            signal:ttsAbortController.signal
+            body:JSON.stringify({texto:texto})
         });
 
         if(!resposta.ok){
@@ -2693,15 +2685,6 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
         }
 
         let blob = await resposta.blob();
-
-        // Se o usuário clicou em parar enquanto baixava o áudio, não toca nada.
-        if(botaoAudioAtual !== botao){
-            return;
-        }
-
-        audioCarregando = false;
-        botao.innerHTML = "⏹ Parar de ouvir";
-
         audioUrlAtual = URL.createObjectURL(blob);
         audioRespostaAtual = new Audio(audioUrlAtual);
 
@@ -2717,33 +2700,12 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
         await audioRespostaAtual.play();
 
     }catch(erro){
-        if(erro.name === "AbortError"){
-            pararAudioAtual();
-            return;
-        }
-
         console.log(erro);
-        audioCarregando = false;
 
-        // Fallback: se ElevenLabs falhar, usa voz do navegador, mas mantendo o botão Parar.
-        if("speechSynthesis" in window && botaoAudioAtual === botao){
-            let fala = new SpeechSynthesisUtterance(texto);
-            fala.lang = "pt-BR";
-            fala.rate = 0.95;
-            fala.pitch = 1;
+        pararAudioAtual();
+        resetarBotaoAudio(botao);
 
-            falaNavegadorAtual = fala;
-            botao.innerHTML = "⏹ Parar de ouvir";
-
-            fala.onend = () => {
-                pararAudioAtual();
-            };
-
-            speechSynthesis.speak(fala);
-        }else{
-            pararAudioAtual();
-            alert("Seu navegador não conseguiu tocar a resposta.");
-        }
+        alert("A voz humanizada não carregou. Verifique a voz escolhida, os créditos ou a chave da ElevenLabs.");
     }
 }
 
@@ -3485,7 +3447,32 @@ def analisar_audio():
                 (conversa, usuario, texto_audio[:30])
             )
 
-        mensagem_usuario = "🎙️ Áudio transcrito: " + texto_audio
+        audio_mime = audio.mimetype or "audio/webm"
+        audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+        audio_src = f"data:{audio_mime};base64,{audio_base64}"
+        texto_audio_html = html_lib.escape(texto_audio)
+
+        mensagem_usuario = f"""
+            <div class="audio-card">
+                <div class="audio-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                    </svg>
+                </div>
+
+                <div class="audio-info">
+                    <div class="audio-title">Áudio enviado</div>
+                    <audio class="chat-audio" controls src="{audio_src}"></audio>
+                </div>
+            </div>
+
+            <div class="audio-transcription">
+                <strong>Transcrição:</strong> {texto_audio_html}
+            </div>
+        """
 
         cur.execute(
             "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
