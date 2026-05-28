@@ -5,6 +5,7 @@ import psycopg2.extras
 import os
 import base64
 import json
+import re
 import urllib.request
 import urllib.error
 import html as html_lib
@@ -472,6 +473,10 @@ HTML = """
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calmi AI</title>
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#2563EB">
+
 
 <style>
 *{
@@ -1664,6 +1669,122 @@ body{
     }
 }
 
+
+/* LOGO CALMI - SITE / APP */
+.brand-logo-card{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    width:100%;
+}
+
+.brand-logo-mark{
+    width:64px;
+    height:64px;
+    border-radius:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:linear-gradient(145deg,rgba(37,99,235,.95),rgba(79,70,229,.85));
+    box-shadow:
+        0 18px 42px rgba(37,99,235,.35),
+        inset 0 1px 0 rgba(255,255,255,.25);
+    flex-shrink:0;
+    overflow:hidden;
+}
+
+.brand-logo-mark svg{
+    width:58px;
+    height:58px;
+    filter:drop-shadow(0 8px 12px rgba(0,0,0,.18));
+}
+
+.brand-text{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    line-height:1.1;
+}
+
+.brand-text h1,
+.brand-text h2{
+    margin:0;
+}
+
+.logo .brand-text h1{
+    font-size:38px;
+}
+
+.brand-text p,
+.brand-text span{
+    color:#CBD5E1;
+    font-size:13px;
+    margin-top:6px;
+}
+
+.login-brand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    margin-bottom:16px;
+}
+
+.login-brand .brand-logo-mark{
+    width:86px;
+    height:86px;
+    border-radius:28px;
+}
+
+.login-brand .brand-logo-mark svg{
+    width:76px;
+    height:76px;
+}
+
+.mobile-brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.mobile-brand .brand-logo-mark{
+    width:44px;
+    height:44px;
+    border-radius:16px;
+}
+
+.mobile-brand .brand-logo-mark svg{
+    width:40px;
+    height:40px;
+}
+
+.mobile-brand h2{
+    margin:0;
+    color:#60A5FA;
+}
+
+@media(max-width:800px){
+    .brand-logo-card{
+        justify-content:flex-start;
+    }
+
+    .logo .brand-text h1{
+        font-size:34px;
+    }
+
+    .brand-logo-mark{
+        width:58px;
+        height:58px;
+        border-radius:20px;
+    }
+
+    .brand-logo-mark svg{
+        width:52px;
+        height:52px;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -1672,9 +1793,33 @@ body{
 
     <div class="login-box">
 
-        <h1>Calmi</h1>
+        <div class="login-brand">
+            
+<div class="brand-logo-mark" aria-hidden="true">
+    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#60A5FA"/>
+                <stop offset="100%" stop-color="#2563EB"/>
+            </linearGradient>
+            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#99F6E4"/>
+                <stop offset="100%" stop-color="#2DD4BF"/>
+            </linearGradient>
+        </defs>
+        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
+        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+</div>
 
-        <p>Sua IA emocional 💙</p>
+            <div>
+                <h1>Calmi</h1>
+                <p>Sua IA emocional 💙</p>
+            </div>
+        </div>
 
         <div class="tabs">
 
@@ -1761,7 +1906,30 @@ body{
 
     <div class="mobile-menu-header">
 
-        <h2>Calmi</h2>
+        <div class="mobile-brand">
+            
+<div class="brand-logo-mark" aria-hidden="true">
+    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#60A5FA"/>
+                <stop offset="100%" stop-color="#2563EB"/>
+            </linearGradient>
+            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#99F6E4"/>
+                <stop offset="100%" stop-color="#2DD4BF"/>
+            </linearGradient>
+        </defs>
+        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
+        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+</div>
+
+            <h2>Calmi</h2>
+        </div>
 
         <button onclick="toggleMenuMobile()">✕</button>
 
@@ -1811,9 +1979,33 @@ body{
 
         <div class="logo">
 
-            <h1>Calmi</h1>
+            <div class="brand-logo-card">
+                
+<div class="brand-logo-mark" aria-hidden="true">
+    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#60A5FA"/>
+                <stop offset="100%" stop-color="#2563EB"/>
+            </linearGradient>
+            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#99F6E4"/>
+                <stop offset="100%" stop-color="#2DD4BF"/>
+            </linearGradient>
+        </defs>
+        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
+        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+</div>
 
-            <p>IA emocional inteligente</p>
+                <div class="brand-text">
+                    <h1>Calmi</h1>
+                    <p>IA emocional inteligente</p>
+                </div>
+            </div>
 
         </div>
 
@@ -2749,21 +2941,7 @@ async function enviarAudio(audioBlob, audioUrl){
     let dados = await resposta.json();
 
     botDiv.innerHTML = "";
-
-    if(dados.transcricao){
-        let audioMessages = chat.querySelectorAll(".message.user");
-        let ultimaMsgAudio = audioMessages[audioMessages.length - 1];
-
-        if(ultimaMsgAudio){
-            ultimaMsgAudio.innerHTML += `
-                <div class="audio-transcription">
-                    <strong>Transcrição:</strong> ${dados.transcricao}
-                </div>
-            `;
-        }
-    }
-
-    let texto = dados.resposta || "Não consegui entender o áudio agora.";
+let texto = dados.resposta || "Não consegui entender o áudio agora.";
     let i = 0;
 
     let intervalo = setInterval(() => {
@@ -3056,10 +3234,7 @@ async function carregarDashboard(){
 
 function exportarConversa(){
     if(!conversaAtual){ mostrarToast('Abra uma conversa primeiro.'); return; }
-    let escolhaPdf = confirm('Deseja exportar em PDF?
-
-OK = PDF
-Cancelar = TXT');
+    let escolhaPdf = confirm('Deseja exportar em PDF?\n\nOK = PDF\nCancelar = TXT');
     window.open((escolhaPdf ? '/exportar_pdf/' : '/exportar/') + conversaAtual,'_blank');
 }
 
@@ -3078,6 +3253,24 @@ verificarSessao();
 </body>
 </html>
 """
+
+
+
+
+@app.route("/favicon.svg")
+def favicon_svg():
+    svg = """<svg viewBox='0 0 120 90' xmlns='http://www.w3.org/2000/svg'>
+    <defs>
+    <linearGradient id='b' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#60A5FA'/><stop offset='100%' stop-color='#2563EB'/></linearGradient>
+    <linearGradient id='m' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#99F6E4'/><stop offset='100%' stop-color='#2DD4BF'/></linearGradient>
+    </defs>
+    <path d='M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z' fill='url(#b)'/>
+    <path d='M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z' fill='url(#m)'/>
+    <path d='M31 40c3-7 13-7 16 0' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/>
+    <path d='M58 40c3-7 13-7 16 0' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/>
+    <path d='M43 56c8 9 20 9 28 0' fill='none' stroke='white' stroke-width='7' stroke-linecap='round'/>
+    </svg>"""
+    return Response(svg, mimetype="image/svg+xml")
 
 
 @app.route("/")
@@ -4098,6 +4291,65 @@ def exportar(id):
     return "\n".join(linhas), 200, {
         "Content-Type":"text/plain; charset=utf-8",
         "Content-Disposition":"attachment; filename=conversa_calmi.txt"
+    }
+
+
+
+@app.route("/exportar_pdf/<id>")
+def exportar_pdf(id):
+    if "usuario" not in session:
+        return "Você precisa estar logado.", 401
+
+    usuario = session["usuario"]
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT * FROM conversas WHERE id=%s AND usuario=%s", (id, usuario))
+    conversa = cur.fetchone()
+
+    if not conversa:
+        cur.close()
+        conn.close()
+        return "Conversa não encontrada.", 404
+
+    cur.execute("SELECT tipo, texto FROM mensagens WHERE conversa_id=%s ORDER BY id ASC", (id,))
+    mensagens = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    html_pdf = f"""
+    <!DOCTYPE html>
+    <html lang='pt-br'>
+    <head>
+        <meta charset='UTF-8'>
+        <title>Conversa Calmi</title>
+        <style>
+            body{{font-family:Arial, sans-serif; padding:30px; color:#111827;}}
+            h1{{color:#4F46E5;}}
+            .msg{{margin:14px 0; padding:12px; border-radius:12px; background:#F1F5F9;}}
+            .user{{border-left:5px solid #4F46E5;}}
+            .bot{{border-left:5px solid #06B6D4;}}
+            audio,img,svg,button{{display:none !important;}}
+        </style>
+    </head>
+    <body>
+        <h1>Calmi AI</h1>
+        <h2>{html_lib.escape(conversa['nome'])}</h2>
+    """
+
+    for m in mensagens:
+        remetente = "Você" if m["tipo"] == "user" else "Calmi"
+        texto_limpo = re.sub(r"<[^>]+>", " ", m["texto"])
+        texto_limpo = html_lib.escape(" ".join(texto_limpo.split()))
+        classe = "user" if m["tipo"] == "user" else "bot"
+        html_pdf += f"<div class='msg {classe}'><strong>{remetente}:</strong><br>{texto_limpo}</div>"
+
+    html_pdf += "</body></html>"
+
+    return html_pdf, 200, {
+        "Content-Type":"text/html; charset=utf-8",
+        "Content-Disposition":"attachment; filename=conversa_calmi.html"
     }
 
 
