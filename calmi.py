@@ -236,7 +236,6 @@ def sugerir_profissional(texto, risco):
     return "Psicólogo clínico"
 
 
-```python
 def resumir_contexto(historico):
 
     if not historico:
@@ -306,7 +305,6 @@ def resumir_contexto(historico):
 
 
 HTML = """
-```
 
 <!DOCTYPE html>
 <html lang="pt-br">
