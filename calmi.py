@@ -8,7 +8,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "calmi-dev-secret")
-app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # limite de 4MB para uploads
+app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # limite de 12MB para imagens/áudios
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -39,6 +39,12 @@ def init_db():
         senha TEXT NOT NULL
     )
     """)
+
+    try:
+        cur.execute("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_perfil TEXT")
+    except Exception:
+        pass
+
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS conversas (
@@ -397,6 +403,19 @@ body{
     justify-content:center;
     font-weight:bold;
     font-size:22px;
+    overflow:hidden;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+.avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.avatar:hover{
+    outline:2px solid rgba(96,165,250,.8);
 }
 
 .status{
@@ -556,6 +575,17 @@ body{
 .attach-btn svg{
     width:22px;
     height:22px;
+}
+
+.attach-btn.recording{
+    background:linear-gradient(135deg,#EF4444,#F97316) !important;
+    animation:pulseMic 1s infinite;
+}
+
+@keyframes pulseMic{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.06)}
+    100%{transform:scale(1)}
 }
 
 .user{
@@ -951,6 +981,14 @@ body{
 
 </div>
 
+<input
+    type="file"
+    id="fotoPerfilInput"
+    accept="image/png,image/jpeg,image/webp"
+    style="display:none"
+    onchange="alterarFotoPerfil(this)"
+>
+
 <div class="mobile-menu" id="mobileMenu">
 
     <div class="mobile-menu-header">
@@ -996,7 +1034,7 @@ body{
 
         <div class="profile">
 
-            <div class="avatar" id="avatar">C</div>
+            <div class="avatar" id="avatar" title="Alterar foto de perfil" onclick="document.getElementById('fotoPerfilInput').click()">C</div>
 
             <div>
 
@@ -1083,6 +1121,15 @@ body{
                 onchange="enviarImagem(this)"
             >
 
+            <button class="attach-btn" id="audioBtn" type="button" title="Gravar áudio" aria-label="Gravar áudio" onclick="alternarGravacaoAudio()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                    <line x1="8" y1="22" x2="16" y2="22"></line>
+                </svg>
+            </button>
+
             <input
                 type="text"
                 id="mensagem"
@@ -1104,6 +1151,9 @@ body{
 let usuarioAtual = "";
 let conversaAtual = crypto.randomUUID();
 let modo = "login";
+let mediaRecorder = null;
+let audioChunks = [];
+let gravandoAudio = false;
 
 function mudarTab(tipo){
 
@@ -1182,12 +1232,79 @@ function iniciarApp(usuario){
 
     document.getElementById("nomeUsuario").innerText = usuario;
 
-    document.getElementById("avatar").innerText =
-        usuario[0].toUpperCase();
+    atualizarAvatarInicial(usuario);
+
+    carregarFotoPerfil();
 
     novaConversa();
 
     carregarConversas();
+}
+
+function atualizarAvatarInicial(usuario){
+
+    let avatar = document.getElementById("avatar");
+    avatar.innerHTML = usuario[0].toUpperCase();
+}
+
+function aplicarFotoPerfil(foto){
+
+    let avatar = document.getElementById("avatar");
+
+    if(foto){
+        avatar.innerHTML = `<img src="${foto}" alt="Foto de perfil">`;
+    }else{
+        atualizarAvatarInicial(usuarioAtual || "C");
+    }
+}
+
+async function carregarFotoPerfil(){
+
+    let resposta = await fetch("/perfil");
+    let dados = await resposta.json();
+
+    if(dados.foto_perfil){
+        aplicarFotoPerfil(dados.foto_perfil);
+    }
+}
+
+async function alterarFotoPerfil(inputArquivo){
+
+    let arquivo = inputArquivo.files[0];
+
+    if(!arquivo){
+        return;
+    }
+
+    if(arquivo.size > 2 * 1024 * 1024){
+        alert("A foto precisa ter até 2MB.");
+        inputArquivo.value = "";
+        return;
+    }
+
+    let leitor = new FileReader();
+
+    leitor.onload = async function(){
+
+        let fotoBase64 = leitor.result;
+
+        let resposta = await fetch("/perfil",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({foto_perfil:fotoBase64})
+        });
+
+        let dados = await resposta.json();
+
+        if(dados.status === "ok"){
+            aplicarFotoPerfil(fotoBase64);
+        }else{
+            alert(dados.erro || "Não consegui salvar a foto.");
+        }
+    };
+
+    leitor.readAsDataURL(arquivo);
+    inputArquivo.value = "";
 }
 
 function verificarSessao(){
@@ -1379,6 +1496,111 @@ async function enviarImagem(inputArquivo){
     }, 12);
 
     inputArquivo.value = "";
+    carregarConversas();
+}
+
+async function alternarGravacaoAudio(){
+
+    let botao = document.getElementById("audioBtn");
+
+    if(!gravandoAudio){
+
+        try{
+            let stream = await navigator.mediaDevices.getUserMedia({audio:true});
+
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = function(event){
+                if(event.data.size > 0){
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async function(){
+
+                stream.getTracks().forEach(track => track.stop());
+
+                let audioBlob = new Blob(audioChunks, {type:"audio/webm"});
+
+                await enviarAudio(audioBlob);
+            };
+
+            mediaRecorder.start();
+            gravandoAudio = true;
+            botao.classList.add("recording");
+            botao.title = "Parar gravação";
+
+        }catch(erro){
+            alert("Não consegui acessar o microfone. Verifique a permissão do navegador.");
+        }
+
+    }else{
+
+        gravandoAudio = false;
+        botao.classList.remove("recording");
+        botao.title = "Gravar áudio";
+
+        if(mediaRecorder && mediaRecorder.state !== "inactive"){
+            mediaRecorder.stop();
+        }
+    }
+}
+
+async function enviarAudio(audioBlob){
+
+    if(audioBlob.size > 8 * 1024 * 1024){
+        alert("O áudio ficou muito grande. Grave um áudio menor.");
+        return;
+    }
+
+    let chat = document.getElementById("chat");
+
+    chat.innerHTML += `
+        <div class="message user">
+            Áudio enviado 🎙️
+        </div>
+    `;
+
+    let botDiv = document.createElement("div");
+    botDiv.className = "message bot";
+    botDiv.innerHTML = `
+        <div class="typing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    `;
+
+    chat.appendChild(botDiv);
+    chat.scrollTop = chat.scrollHeight;
+
+    let formData = new FormData();
+    formData.append("conversa", conversaAtual);
+    formData.append("audio", audioBlob, "audio.webm");
+
+    let resposta = await fetch("/audio",{
+        method:"POST",
+        body:formData
+    });
+
+    let dados = await resposta.json();
+
+    botDiv.innerHTML = "";
+
+    let texto = dados.resposta || "Não consegui entender o áudio agora.";
+    let i = 0;
+
+    let intervalo = setInterval(() => {
+        botDiv.innerHTML += texto[i];
+        i++;
+        chat.scrollTop = chat.scrollHeight;
+
+        if(i >= texto.length){
+            clearInterval(intervalo);
+        }
+    }, 12);
+
     carregarConversas();
 }
 
@@ -1595,6 +1817,58 @@ def login():
         "status": "ok",
         "usuario": usuario
     })
+
+
+@app.route("/perfil", methods=["GET", "POST"])
+def perfil():
+
+    if "usuario" not in session:
+        return jsonify({"status":"erro", "erro":"Você precisa estar logado."})
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    if request.method == "GET":
+
+        cur.execute(
+            "SELECT foto_perfil FROM usuarios WHERE usuario=%s",
+            (usuario,)
+        )
+
+        user = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "foto_perfil": user["foto_perfil"] if user and user["foto_perfil"] else None
+        })
+
+    dados = request.get_json()
+    foto = dados.get("foto_perfil")
+
+    if not foto or not foto.startswith("data:image/"):
+        cur.close()
+        conn.close()
+        return jsonify({"status":"erro", "erro":"Imagem inválida."})
+
+    if len(foto) > 3_000_000:
+        cur.close()
+        conn.close()
+        return jsonify({"status":"erro", "erro":"Imagem muito grande."})
+
+    cur.execute(
+        "UPDATE usuarios SET foto_perfil=%s WHERE usuario=%s",
+        (foto, usuario)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"status":"ok"})
 
 
 @app.route("/logout")
@@ -1943,6 +2217,146 @@ Regras:
         return jsonify({
             "resposta": "Erro ao analisar a imagem 😔"
         })
+
+
+@app.route("/audio", methods=["POST"])
+def analisar_audio():
+
+    try:
+
+        if "usuario" not in session:
+            return jsonify({"resposta":"Você precisa estar logado."})
+
+        if client is None:
+            return jsonify({"resposta":"A API da Groq não foi configurada."})
+
+        usuario = session["usuario"]
+        conversa = request.form.get("conversa")
+        audio = request.files.get("audio")
+
+        if not conversa:
+            return jsonify({"resposta":"Conversa não encontrada."})
+
+        if not audio:
+            return jsonify({"resposta":"Nenhum áudio foi enviado."})
+
+        audio_bytes = audio.read()
+
+        if len(audio_bytes) > 8 * 1024 * 1024:
+            return jsonify({"resposta":"O áudio é muito grande. Envie um áudio menor."})
+
+        transcricao = client.audio.transcriptions.create(
+            file=(audio.filename or "audio.webm", audio_bytes, audio.mimetype or "audio/webm"),
+            model="whisper-large-v3-turbo",
+            language="pt",
+            response_format="json"
+        )
+
+        texto_audio = getattr(transcricao, "text", "").strip()
+
+        if not texto_audio:
+            return jsonify({"resposta":"Não consegui entender o áudio com clareza."})
+
+        historico = buscar_historico(usuario)
+        risco = analisar_risco_emocional(texto_audio, historico)
+        profissional = sugerir_profissional(texto_audio, risco)
+        contexto = resumir_contexto(historico)
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT * FROM conversas WHERE id=%s",
+            (conversa,)
+        )
+
+        existe = cur.fetchone()
+
+        if not existe:
+            cur.execute(
+                "INSERT INTO conversas(id, usuario, nome) VALUES (%s,%s,%s)",
+                (conversa, usuario, texto_audio[:30])
+            )
+
+        mensagem_usuario = "🎙️ Áudio transcrito: " + texto_audio
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (conversa, "user", mensagem_usuario)
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(conversa, usuario, "user", texto_audio, risco)
+
+        if risco == "crítico":
+            resposta_texto = (
+                "Eu entendi seu áudio. 💙 Você parece estar passando por algo muito pesado. "
+                "Você não precisa enfrentar isso sozinho. Procure alguém de confiança, um responsável "
+                "ou ajuda profissional. No Brasil, o CVV atende pelo 188."
+            )
+        else:
+            prompt = f"""
+Você é o Calmi.
+
+O usuário enviou um áudio. Transcrição:
+{texto_audio}
+
+Contexto emocional recente:
+{contexto}
+
+Nível emocional detectado:
+{risco}
+
+Sugestão de apoio:
+{profissional}
+
+Regras:
+- Responda como se tivesse ouvido o áudio do usuário.
+- Seja acolhedor.
+- Não diagnostique.
+- Não substitua terapia.
+- Fale em português brasileiro.
+- Responda de forma curta, humana e natural.
+"""
+
+            resposta = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role":"system", "content":prompt},
+                    {"role":"user", "content":texto_audio}
+                ]
+            )
+
+            resposta_texto = resposta.choices[0].message.content
+
+            if risco == "elevado":
+                resposta_texto += (
+                    "<br><br>💙 Pode ser útil conversar com "
+                    f"{profissional}. Você merece apoio de verdade."
+                )
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (conversa, "bot", resposta_texto)
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(conversa, usuario, "bot", resposta_texto, risco)
+
+        return jsonify({"resposta":resposta_texto, "transcricao":texto_audio})
+
+    except Exception as erro:
+        print(erro)
+        return jsonify({"resposta":"Erro ao processar o áudio 😔"})
 
 
 @app.route("/conversas")
