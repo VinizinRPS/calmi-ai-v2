@@ -532,8 +532,30 @@ body{
 }
 
 .attach-btn{
-    padding:14px 16px !important;
-    background:#111827 !important;
+    width:48px;
+    height:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:none;
+    border-radius:16px;
+    background:linear-gradient(135deg,var(--roxo),var(--azul)) !important;
+    color:white;
+    cursor:pointer;
+    flex-shrink:0;
+    padding:0 !important;
+    box-shadow:0 8px 22px rgba(79,70,229,.25);
+    transition:.22s ease;
+}
+
+.attach-btn:hover{
+    transform:translateY(-2px) scale(1.03);
+    box-shadow:0 12px 28px rgba(6,182,212,.28);
+}
+
+.attach-btn svg{
+    width:22px;
+    height:22px;
 }
 
 .user{
@@ -855,6 +877,13 @@ body{
         font-size:14px;
     }
 
+    .input-area .attach-btn{
+        width:46px;
+        height:46px;
+        padding:0 !important;
+        border-radius:15px;
+    }
+
     .login-box{
         width:90%;
         padding:28px;
@@ -1037,8 +1066,13 @@ body{
 
         <div class="input-area">
 
-            <button class="attach-btn" type="button" onclick="document.getElementById('imagemInput').click()">
-                📷
+            <button class="attach-btn" type="button" title="Enviar imagem" aria-label="Enviar imagem" onclick="document.getElementById('imagemInput').click()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+                    <circle cx="9" cy="11" r="2"></circle>
+                    <path d="M21 17l-5.2-5.2a2 2 0 0 0-2.8 0L6 19"></path>
+                    <path d="M15 5l1.2-2h2.6L20 5"></path>
+                </svg>
             </button>
 
             <input
