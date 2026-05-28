@@ -885,10 +885,85 @@ body{
     max-height:40px;
 }
 
+/* CARD DE ÁUDIO NO CHAT */
+.audio-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px;
+    margin-top:6px;
+    border-radius:18px;
+    background:rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.18);
+    max-width:340px;
+}
+
+.audio-icon{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    background:rgba(255,255,255,.22);
+    color:white;
+    box-shadow:0 8px 22px rgba(0,0,0,.18);
+}
+
+.audio-icon svg{
+    width:22px;
+    height:22px;
+}
+
+.audio-info{
+    flex:1;
+    min-width:0;
+}
+
+.audio-title{
+    font-weight:bold;
+    font-size:13px;
+    margin-bottom:6px;
+    opacity:.95;
+}
+
 .chat-audio{
-    width:260px;
-    max-width:100%;
-    margin-top:8px;
+    width:100%;
+    max-width:245px;
+    height:34px;
+    display:block;
+}
+
+.audio-transcription{
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:14px;
+    background:rgba(255,255,255,.16);
+    font-size:13px;
+    line-height:1.4;
+}
+
+.bot .audio-card{
+    background:#F1F5F9;
+    border:1px solid rgba(15,23,42,.06);
+}
+
+.bot .audio-icon{
+    background:linear-gradient(135deg,var(--roxo),var(--azul));
+}
+
+.bot .audio-title{
+    color:#111827;
+}
+
+.dark .bot .audio-card{
+    background:#111827;
+    border:1px solid rgba(255,255,255,.08);
+}
+
+.dark .bot .audio-title{
+    color:white;
 }
 
 .dark .audio-recorder{
@@ -1851,8 +1926,20 @@ async function enviarAudio(audioBlob, audioUrl){
 
     chat.innerHTML += `
         <div class="message user">
-            Áudio enviado 🎙️
-            <audio class="chat-audio" controls src="${audioUrl}"></audio>
+            <div class="audio-card">
+                <div class="audio-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                    </svg>
+                </div>
+                <div class="audio-info">
+                    <div class="audio-title">Áudio enviado</div>
+                    <audio class="chat-audio" controls src="${audioUrl}"></audio>
+                </div>
+            </div>
         </div>
     `;
 
@@ -1881,6 +1968,19 @@ async function enviarAudio(audioBlob, audioUrl){
     let dados = await resposta.json();
 
     botDiv.innerHTML = "";
+
+    if(dados.transcricao){
+        let audioMessages = chat.querySelectorAll(".message.user");
+        let ultimaMsgAudio = audioMessages[audioMessages.length - 1];
+
+        if(ultimaMsgAudio){
+            ultimaMsgAudio.innerHTML += `
+                <div class="audio-transcription">
+                    <strong>Transcrição:</strong> ${dados.transcricao}
+                </div>
+            `;
+        }
+    }
 
     let texto = dados.resposta || "Não consegui entender o áudio agora.";
     let i = 0;
