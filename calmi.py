@@ -14,6 +14,10 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 
+# ==========================================
+# BANCO SUPABASE / POSTGRESQL
+# ==========================================
+
 def get_db():
     return psycopg2.connect(
         DATABASE_URL,
@@ -72,6 +76,10 @@ def init_db():
 init_db()
 
 
+# ==========================================
+# MEMÓRIA
+# ==========================================
+
 def buscar_historico(usuario, limite=20):
     conn = get_db()
     cur = conn.cursor()
@@ -117,30 +125,63 @@ def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
     conn.close()
 
 
+# ==========================================
+# ANÁLISE EMOCIONAL
+# ==========================================
+
 def analisar_risco_emocional(texto, historico):
     texto = texto.lower()
 
     pontos = 0
 
-    leve = ["cansado", "triste", "preocupado", "desanimado"]
-    moderado = ["ansioso", "ansiedade", "medo", "sozinho", "sem energia", "não consigo dormir"]
-    elevado = ["não aguento", "muito mal", "sem saída", "colapso", "não consigo continuar"]
-    critico = ["não quero mais viver", "quero sumir", "não vejo saída"]
+    leve = [
+        "cansado",
+        "triste",
+        "preocupado",
+        "desanimado",
+        "estressado"
+    ]
 
-    for p in leve:
-        if p in texto:
+    moderado = [
+        "ansioso",
+        "ansiedade",
+        "medo",
+        "sozinho",
+        "isolado",
+        "sem energia",
+        "insônia",
+        "não consigo dormir"
+    ]
+
+    elevado = [
+        "não aguento",
+        "muito mal",
+        "sem saída",
+        "colapso",
+        "não consigo continuar",
+        "sem forças"
+    ]
+
+    critico = [
+        "não quero mais viver",
+        "quero sumir",
+        "não vejo saída"
+    ]
+
+    for palavra in leve:
+        if palavra in texto:
             pontos += 1
 
-    for p in moderado:
-        if p in texto:
+    for palavra in moderado:
+        if palavra in texto:
             pontos += 2
 
-    for p in elevado:
-        if p in texto:
+    for palavra in elevado:
+        if palavra in texto:
             pontos += 4
 
-    for p in critico:
-        if p in texto:
+    for palavra in critico:
+        if palavra in texto:
             pontos += 8
 
     historico_texto = " ".join([
@@ -149,8 +190,17 @@ def analisar_risco_emocional(texto, historico):
         if h["remetente"] == "user"
     ])
 
-    for p in ["triste", "ansioso", "sozinho", "cansado", "sem energia"]:
-        if historico_texto.count(p) >= 3:
+    repeticoes = [
+        "triste",
+        "ansioso",
+        "sozinho",
+        "cansado",
+        "sem energia",
+        "não consigo dormir"
+    ]
+
+    for palavra in repeticoes:
+        if historico_texto.count(palavra) >= 3:
             pontos += 2
 
     if pontos >= 8:
@@ -198,19 +248,20 @@ def resumir_contexto(historico):
 
     resumo = ""
 
-    if any("cansado" in t for t in textos):
+    if any("cansado" in texto for texto in textos):
         resumo += "O usuário mencionou cansaço emocional. "
 
-    if any("sozinho" in t for t in textos):
+    if any("sozinho" in texto for texto in textos):
         resumo += "O usuário mencionou solidão ou isolamento. "
 
-    if any("ansioso" in t or "ansiedade" in t for t in textos):
+    if any("ansioso" in texto or "ansiedade" in texto for texto in textos):
         resumo += "O usuário mencionou ansiedade ou preocupação. "
 
+    if any("não consigo dormir" in texto or "insônia" in texto for texto in textos):
+        resumo += "O usuário mencionou dificuldade para dormir. "
+
     return resumo if resumo else "Histórico sem padrão emocional forte."
-
-
-HTML = """
+    HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -229,6 +280,7 @@ HTML = """
     --roxo:#4F46E5;
     --roxo2:#7C3AED;
     --azul:#06B6D4;
+    --fundo:#0F172A;
 }
 
 body{
@@ -236,9 +288,9 @@ body{
     height:100vh;
     overflow:hidden;
     background:
-    radial-gradient(circle at top left, rgba(124,58,237,.55), transparent 35%),
-    radial-gradient(circle at bottom right, rgba(6,182,212,.45), transparent 35%),
-    linear-gradient(135deg,#0F172A,#111827);
+        radial-gradient(circle at top left, rgba(124,58,237,.55), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(6,182,212,.45), transparent 35%),
+        linear-gradient(135deg,#0F172A,#111827);
 }
 
 .container{
@@ -257,6 +309,7 @@ body{
     padding:18px;
     display:flex;
     flex-direction:column;
+    box-shadow:0 25px 70px rgba(0,0,0,.35);
 }
 
 .logo{
@@ -364,6 +417,7 @@ body{
     background:rgba(248,250,252,.95);
     border-radius:28px;
     overflow:hidden;
+    box-shadow:0 25px 70px rgba(0,0,0,.25);
 }
 
 .top{
@@ -434,525 +488,1258 @@ body{
     color:#111827;
     box-shadow:0 10px 25px rgba(0,0,0,.08);
 }
+
 .typing{
-display:flex;
-gap:5px;
+    display:flex;
+    gap:5px;
 }
 
 .dot{
-width:7px;
-height:7px;
-border-radius:50%;
-background:#7C3AED;
-animation:dot 1s infinite ease-in-out;
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#7C3AED;
+    animation:dot 1s infinite ease-in-out;
 }
 
 .dot:nth-child(2){
-animation-delay:.15s;
+    animation-delay:.15s;
 }
 
 .dot:nth-child(3){
-animation-delay:.3s;
+    animation-delay:.3s;
 }
 
 @keyframes dot{
-0%,80%,100%{
-opacity:.4;
-transform:scale(.7);
-}
+    0%,80%,100%{
+        opacity:.4;
+        transform:scale(.7);
+    }
 
-40%{
-opacity:1;
-transform:scale(1);
-}
+    40%{
+        opacity:1;
+        transform:scale(1);
+    }
 }
 
 .input-area{
-display:flex;
-gap:10px;
-padding:14px;
-background:white;
-border-top:1px solid rgba(0,0,0,.06);
+    display:flex;
+    gap:10px;
+    padding:14px;
+    background:white;
+    border-top:1px solid rgba(0,0,0,.06);
 }
 
 .input-area input{
-flex:1;
-padding:14px;
-border:none;
-border-radius:15px;
-background:#F1F5F9;
-outline:none;
+    flex:1;
+    min-width:0;
+    padding:14px;
+    border:none;
+    border-radius:15px;
+    background:#F1F5F9;
+    font-size:15px;
+    outline:none;
 }
 
 .input-area button{
-border:none;
-padding:14px 22px;
-border-radius:15px;
-background:linear-gradient(135deg,var(--azul),var(--roxo));
-color:white;
-font-weight:bold;
-cursor:pointer;
+    border:none;
+    padding:14px 22px;
+    border-radius:15px;
+    background:linear-gradient(135deg,var(--azul),var(--roxo));
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.dark .main{
+    background:#0F172A;
+}
+
+.dark .top,
+.dark .input-area{
+    background:#111827;
+    color:white;
+}
+
+.dark .bot{
+    background:#1F2937;
+    color:white;
+}
+
+.dark .input-area input{
+    background:#1F2937;
+    color:white;
 }
 
 .login{
-position:fixed;
-inset:0;
-display:flex;
-align-items:center;
-justify-content:center;
-background:
-radial-gradient(circle at top left,#7C3AED,transparent 35%),
-radial-gradient(circle at bottom right,#06B6D4,transparent 35%),
-#0F172A;
-z-index:999;
+    position:fixed;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:999;
+    background:
+        radial-gradient(circle at top left,#7C3AED,transparent 35%),
+        radial-gradient(circle at bottom right,#06B6D4,transparent 35%),
+        #0F172A;
 }
 
 .login-box{
-width:430px;
-background:rgba(255,255,255,.95);
-padding:40px;
-border-radius:30px;
-text-align:center;
+    width:430px;
+    background:rgba(255,255,255,.95);
+    padding:40px;
+    border-radius:30px;
+    text-align:center;
+    box-shadow:0 35px 90px rgba(0,0,0,.35);
+}
+
+.login-box h1{
+    font-size:56px;
+    background:linear-gradient(135deg,var(--roxo),var(--roxo2),var(--azul));
+    -webkit-background-clip:text;
+    color:transparent;
+}
+
+.login-box p{
+    color:#64748B;
+    margin-bottom:24px;
 }
 
 .tabs{
-display:flex;
-gap:10px;
-margin-bottom:25px;
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
 }
 
 .tab{
-flex:1;
-padding:12px;
-border:none;
-border-radius:12px;
-cursor:pointer;
-font-weight:bold;
+    flex:1;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
+    background:#E5E7EB;
+    color:#111827;
 }
 
 .activeTab{
-background:linear-gradient(135deg,var(--roxo),var(--azul));
-color:white;
-}
-
-.login-box h1{
-font-size:56px;
-
-background:
-linear-gradient(
-135deg,
-var(--roxo),
-var(--roxo2),
-var(--azul)
-);
-
--webkit-background-clip:text;
-
-color:transparent;
+    background:linear-gradient(135deg,var(--roxo),var(--azul));
+    color:white;
 }
 
 .login-box input{
-
-width:100%;
-
-padding:15px;
-
-margin-top:12px;
-
-border:none;
-
-border-radius:15px;
-
-background:#F1F5F9;
-
-outline:none;
-
+    width:100%;
+    padding:15px;
+    border:none;
+    background:#F1F5F9;
+    border-radius:16px;
+    margin-top:12px;
+    outline:none;
 }
 
 .login-btn{
-
-width:100%;
-
-padding:15px;
-
-margin-top:18px;
-
-border:none;
-
-border-radius:15px;
-
-background:
-linear-gradient(
-135deg,
-var(--roxo),
-var(--azul)
-);
-
-color:white;
-
-font-weight:bold;
-
-cursor:pointer;
-
+    width:100%;
+    margin-top:18px;
+    padding:15px;
+    border:none;
+    border-radius:16px;
+    background:linear-gradient(135deg,var(--roxo),var(--azul));
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
 }
 
 .error{
-
-margin-top:12px;
-
-color:red;
-
-font-size:14px;
-
+    margin-top:12px;
+    color:#EF4444;
+    font-size:14px;
+    min-height:20px;
 }
 
 .loading{
-
-opacity:.7;
-
-pointer-events:none;
-
+    opacity:.7;
+    pointer-events:none;
 }
 
 @media(max-width:800px){
+    body{
+        overflow:hidden;
+    }
 
-.container{
-padding:0;
-display:block;
-}
+    .container{
+        height:100vh;
+        display:block;
+        padding:0;
+    }
 
-.sidebar{
-display:none;
-}
+    .sidebar{
+        display:none;
+    }
 
-.main{
-width:100%;
-height:100vh;
-border-radius:0;
-}
+    .main{
+        width:100%;
+        height:100vh;
+        border-radius:0;
+    }
 
-.mobile-menu-btn{
-display:block;
-}
+    .top{
+        padding:14px;
+        gap:10px;
+    }
 
-.chat{
-padding:14px;
-padding-bottom:90px;
-}
+    .top h2{
+        font-size:19px;
+    }
 
-.message{
-max-width:90%;
-font-size:14px;
-}
+    .subtitle{
+        font-size:12px;
+    }
 
-.input-area{
-position:fixed;
-left:0;
-right:0;
-bottom:0;
-}
+    .mobile-menu-btn{
+        display:block;
+    }
 
-.login-box{
-width:92%;
-padding:30px;
-}
+    .mobile-menu{
+        display:flex;
+        flex-direction:column;
+        position:fixed;
+        top:0;
+        left:-86%;
+        width:84%;
+        height:100vh;
+        background:#111827;
+        color:white;
+        z-index:1000;
+        padding:18px;
+        transition:.3s ease;
+        box-shadow:20px 0 60px rgba(0,0,0,.45);
+    }
 
-.login-box h1{
-font-size:45px;
-}
+    .mobile-menu.open{
+        left:0;
+    }
 
+    .mobile-menu-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:18px;
+    }
+
+    .mobile-menu-header h2{
+        color:#60A5FA;
+    }
+
+    .mobile-menu-header button{
+        border:none;
+        width:34px;
+        height:34px;
+        border-radius:50%;
+        background:#EF4444;
+        color:white;
+        cursor:pointer;
+    }
+
+    .mobile-new-chat{
+        width:100%;
+        padding:14px;
+        border:none;
+        border-radius:14px;
+        background:linear-gradient(135deg,var(--roxo),var(--azul));
+        color:white;
+        font-weight:bold;
+        margin-bottom:14px;
+        cursor:pointer;
+    }
+
+    .chat{
+        padding:14px;
+        padding-bottom:86px;
+    }
+
+    .message{
+        max-width:90%;
+        font-size:14px;
+        padding:13px;
+        border-radius:16px;
+    }
+
+    .input-area{
+        position:fixed;
+        bottom:0;
+        left:0;
+        right:0;
+        z-index:60;
+        padding:10px;
+        gap:8px;
+        background:white;
+        box-shadow:0 -8px 25px rgba(0,0,0,.12);
+    }
+
+    .dark .input-area{
+        background:#111827;
+    }
+
+    .input-area input{
+        padding:13px;
+        font-size:14px;
+    }
+
+    .input-area button{
+        padding:13px 16px;
+        font-size:14px;
+    }
+
+    .login-box{
+        width:90%;
+        padding:28px;
+    }
+
+    .login-box h1{
+        font-size:46px;
+    }
 }
 </style>
 </head>
-
 <body>
 
 <div class="login" id="login">
 
-<div class="login-box">
+    <div class="login-box">
 
-<h1>Calmi</h1>
+        <h1>Calmi</h1>
 
-<p>
-Sua IA emocional 💙
-</p>
+        <p>Sua IA emocional 💙</p>
 
-<div class="tabs">
+        <div class="tabs">
 
-<button
-class="tab activeTab"
-id="tabLogin"
-onclick="mudarTab('login')"
->
-Entrar
-</button>
+            <button
+                class="tab activeTab"
+                id="tabLogin"
+                onclick="mudarTab('login')"
+            >
+                Entrar
+            </button>
 
-<button
-class="tab"
-id="tabCadastro"
-onclick="mudarTab('cadastro')"
->
-Cadastrar
-</button>
+            <button
+                class="tab"
+                id="tabCadastro"
+                onclick="mudarTab('cadastro')"
+            >
+                Cadastrar
+            </button>
 
-</div>
+        </div>
 
-<input
-id="usuario"
-placeholder="Usuário"
->
+        <input
+            type="text"
+            id="usuario"
+            placeholder="Usuário"
+        >
 
-<input
-id="senha"
-type="password"
-placeholder="Senha"
->
+        <input
+            type="password"
+            id="senha"
+            placeholder="Senha"
+        >
 
-<div class="error" id="erro"></div>
+        <div class="error" id="erro"></div>
 
-<button
-class="login-btn"
-id="botaoLogin"
-onclick="enviarAuth()"
->
+        <button
+            class="login-btn"
+            id="botaoLogin"
+            onclick="enviarAuth()"
+        >
+            Entrar
+        </button>
 
-Entrar
-
-</button>
-
-</div>
+    </div>
 
 </div>
 
-""" + HTML.split("</body>")[0].split("<body>")[1] + """
+<div class="mobile-menu" id="mobileMenu">
+
+    <div class="mobile-menu-header">
+
+        <h2>Calmi</h2>
+
+        <button onclick="toggleMenuMobile()">✕</button>
+
+    </div>
+
+    <button
+        class="mobile-new-chat"
+        onclick="novaConversaMobile()"
+    >
+        + Nova conversa
+    </button>
+
+    <button class="logout-btn" onclick="logout()">
+        Sair da conta
+    </button>
+
+    <br>
+
+    <h3>Histórico</h3>
+
+    <br>
+
+    <div id="listaChatsMobile"></div>
+
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <div class="logo">
+
+            <h1>Calmi</h1>
+
+            <p>IA emocional inteligente</p>
+
+        </div>
+
+        <div class="profile">
+
+            <div class="avatar" id="avatar">C</div>
+
+            <div>
+
+                <h3 id="nomeUsuario">Usuário</h3>
+
+                <div class="status">● Online</div>
+
+            </div>
+
+        </div>
+
+        <div class="new-chat">
+
+            <button onclick="novaConversa()">
+                + Nova conversa
+            </button>
+
+        </div>
+
+        <button class="logout-btn" onclick="logout()">
+            Sair da conta
+        </button>
+
+        <div class="chats" id="listaChats"></div>
+
+    </div>
+
+    <div class="main">
+
+        <div class="top">
+
+            <div>
+
+                <h2 id="titulo">Nova conversa</h2>
+
+                <div class="subtitle">
+                    O Calmi está aqui para te ouvir 💙
+                </div>
+
+            </div>
+
+            <div class="top-actions">
+
+                <button
+                    class="mobile-menu-btn"
+                    onclick="toggleMenuMobile()"
+                >
+                    ☰
+                </button>
+
+                <button class="tema-btn" onclick="toggleTema()">
+                    🌙
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="chat" id="chat">
+
+            <div class="message bot">
+                Olá 😊 Eu sou o Calmi.<br><br>
+                Como você está se sentindo hoje?
+            </div>
+
+        </div>
+
+        <div class="input-area">
+
+            <input
+                type="text"
+                id="mensagem"
+                placeholder="Digite sua mensagem..."
+                autocomplete="off"
+            >
+
+            <button onclick="enviarMensagem()">
+                Enviar
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
 
 <script>
-
-let modo="login";
+let usuarioAtual = "";
+let conversaAtual = crypto.randomUUID();
+let modo = "login";
 
 function mudarTab(tipo){
 
-modo=tipo;
+    modo = tipo;
 
-document
-.getElementById("tabLogin")
-.classList.remove("activeTab");
+    document.getElementById("tabLogin").classList.remove("activeTab");
+    document.getElementById("tabCadastro").classList.remove("activeTab");
 
-document
-.getElementById("tabCadastro")
-.classList.remove("activeTab");
+    document.getElementById("erro").innerText = "";
 
-if(tipo=="login"){
+    if(tipo === "login"){
 
-document
-.getElementById("tabLogin")
-.classList.add("activeTab");
+        document.getElementById("tabLogin").classList.add("activeTab");
+        document.getElementById("botaoLogin").innerText = "Entrar";
 
-document
-.getElementById("botaoLogin")
-.innerText="Entrar";
+    }else{
 
-}else{
+        document.getElementById("tabCadastro").classList.add("activeTab");
+        document.getElementById("botaoLogin").innerText = "Criar conta";
 
-document
-.getElementById("tabCadastro")
-.classList.add("activeTab");
-
-document
-.getElementById("botaoLogin")
-.innerText="Criar Conta";
-
-}
-
-document
-.getElementById("erro")
-.innerText="";
-
+    }
 }
 
 async function enviarAuth(){
 
-let usuario=
-document.getElementById("usuario").value;
+    let usuario = document.getElementById("usuario").value;
+    let senha = document.getElementById("senha").value;
 
-let senha=
-document.getElementById("senha").value;
+    if(usuario.trim() === "" || senha.trim() === ""){
 
-if(usuario.trim()=="" || senha.trim()==""){
+        document.getElementById("erro").innerText =
+            "Preencha usuário e senha.";
 
-document
-.getElementById("erro")
-.innerText="Preencha tudo.";
+        return;
+    }
 
-return;
+    let rota = modo === "login" ? "/login" : "/cadastro";
 
+    let botao = document.getElementById("botaoLogin");
+
+    botao.classList.add("loading");
+
+    let resposta = await fetch(rota, {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            usuario,
+            senha
+        })
+    });
+
+    let dados = await resposta.json();
+
+    botao.classList.remove("loading");
+
+    if(dados.status === "ok"){
+
+        usuarioAtual = dados.usuario || usuario;
+
+        iniciarApp(usuarioAtual);
+
+        return;
+    }
+
+    document.getElementById("erro").innerText =
+        dados.erro || "Erro ao entrar.";
 }
 
-let rota=
-modo=="login"
-?"/login"
-:"/cadastro";
+function iniciarApp(usuario){
 
-let botao=
-document.getElementById("botaoLogin");
+    usuarioAtual = usuario;
 
-botao.classList.add("loading");
+    document.getElementById("login").style.display = "none";
 
-let req=
-await fetch(
-rota,
-{
+    document.getElementById("nomeUsuario").innerText = usuario;
 
-method:"POST",
+    document.getElementById("avatar").innerText =
+        usuario[0].toUpperCase();
 
-headers:{
-"Content-Type":"application/json"
-},
+    novaConversa();
 
-body:JSON.stringify({
-usuario,
-senha
-})
-
+    carregarConversas();
 }
 
-);
+function verificarSessao(){
 
-let dados=
-await req.json();
+    fetch("/session")
+    .then(res => res.json())
+    .then(dados => {
 
-botao.classList.remove("loading");
+        if(dados.logado){
 
-if(dados.status=="ok"){
+            iniciarApp(dados.usuario);
 
-location.reload();
-
-return;
-
+        }
+    });
 }
 
-document
-.getElementById("erro")
-.innerText=dados.erro;
+function logout(){
 
+    fetch("/logout")
+    .then(() => {
+        location.reload();
+    });
 }
 
+function toggleTema(){
+
+    document.body.classList.toggle("dark");
+}
+
+function toggleMenuMobile(){
+
+    document.getElementById("mobileMenu").classList.toggle("open");
+}
+
+function novaConversa(){
+
+    conversaAtual = crypto.randomUUID();
+
+    document.getElementById("titulo").innerText = "Nova conversa";
+
+    document.getElementById("chat").innerHTML = `
+        <div class="message bot">
+            Olá 😊 Eu sou o Calmi.<br><br>
+            Como você está se sentindo hoje?
+        </div>
+    `;
+}
+
+function novaConversaMobile(){
+
+    novaConversa();
+
+    document.getElementById("mobileMenu").classList.remove("open");
+}
+
+async function enviarMensagem(){
+
+    let input = document.getElementById("mensagem");
+    let mensagem = input.value;
+
+    if(mensagem.trim() === ""){
+        return;
+    }
+
+    let chat = document.getElementById("chat");
+
+    chat.innerHTML += `
+        <div class="message user">
+            ${mensagem}
+        </div>
+    `;
+
+    input.value = "";
+
+    let botDiv = document.createElement("div");
+
+    botDiv.className = "message bot";
+
+    botDiv.innerHTML = `
+        <div class="typing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    `;
+
+    chat.appendChild(botDiv);
+
+    chat.scrollTop = chat.scrollHeight;
+
+    let resposta = await fetch("/chat", {
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            conversa:conversaAtual,
+            mensagem:mensagem
+        })
+    });
+
+    let dados = await resposta.json();
+
+    botDiv.innerHTML = "";
+
+    let texto = dados.resposta || "Não consegui responder agora.";
+    let i = 0;
+
+    let intervalo = setInterval(() => {
+
+        botDiv.innerHTML += texto[i];
+
+        i++;
+
+        chat.scrollTop = chat.scrollHeight;
+
+        if(i >= texto.length){
+
+            clearInterval(intervalo);
+        }
+
+    }, 12);
+
+    carregarConversas();
+}
+
+function carregarConversas(){
+
+    fetch("/conversas")
+    .then(res => res.json())
+    .then(dados => {
+
+        let lista = document.getElementById("listaChats");
+        let listaMobile = document.getElementById("listaChatsMobile");
+
+        if(lista){
+            lista.innerHTML = "";
+        }
+
+        if(listaMobile){
+            listaMobile.innerHTML = "";
+        }
+
+        dados.forEach(conversa => {
+
+            let item = `
+                <div class="chat-item">
+                    <div onclick="abrirConversa('${conversa.id}')">
+                        ${conversa.nome}
+                    </div>
+
+                    <button
+                        class="delete-btn"
+                        onclick="deletarConversa('${conversa.id}')"
+                    >
+                        x
+                    </button>
+                </div>
+            `;
+
+            if(lista){
+                lista.innerHTML += item;
+            }
+
+            if(listaMobile){
+                listaMobile.innerHTML += item;
+            }
+        });
+    });
+}
+
+function abrirConversa(id){
+
+    fetch("/abrir/" + id)
+    .then(res => res.json())
+    .then(dados => {
+
+        conversaAtual = id;
+
+        document.getElementById("mobileMenu").classList.remove("open");
+
+        let chat = document.getElementById("chat");
+
+        chat.innerHTML = "";
+
+        dados.mensagens.forEach(msg => {
+
+            chat.innerHTML += `
+                <div class="message ${msg.tipo}">
+                    ${msg.texto}
+                </div>
+            `;
+        });
+
+        chat.scrollTop = chat.scrollHeight;
+    });
+}
+
+function deletarConversa(id){
+
+    fetch("/deletar/" + id)
+    .then(() => {
+
+        carregarConversas();
+
+        novaConversa();
+    });
+}
+
+document.getElementById("mensagem")
+.addEventListener("keypress", function(e){
+
+    if(e.key === "Enter"){
+
+        enviarMensagem();
+    }
+});
+
+verificarSessao();
 </script>
 
 </body>
-
 </html>
 """
 
 
-@app.route("/cadastro",methods=["POST"])
+@app.route("/")
+def home():
+    return render_template_string(HTML)
+
+
+@app.route("/session")
+def verificar_session():
+
+    if "usuario" in session:
+
+        return jsonify({
+            "logado": True,
+            "usuario": session["usuario"]
+        })
+
+    return jsonify({
+        "logado": False
+    })
+
+
+@app.route("/cadastro", methods=["POST"])
 def cadastro():
 
-dados=request.get_json()
+    dados = request.get_json()
 
-usuario=dados["usuario"]
+    usuario = dados["usuario"]
+    senha = dados["senha"]
 
-senha=dados["senha"]
+    conn = get_db()
+    cur = conn.cursor()
 
-conn=get_db()
+    cur.execute(
+        "SELECT * FROM usuarios WHERE usuario=%s",
+        (usuario,)
+    )
 
-cur=conn.cursor()
+    existe = cur.fetchone()
 
-cur.execute(
-"SELECT * FROM usuarios WHERE usuario=%s",
-(usuario,)
-)
+    if existe:
 
-existe=cur.fetchone()
+        cur.close()
+        conn.close()
 
-if existe:
+        return jsonify({
+            "status": "erro",
+            "erro": "Usuário já existe."
+        })
 
-return jsonify({
+    cur.execute(
+        "INSERT INTO usuarios(usuario, senha) VALUES (%s,%s)",
+        (usuario, senha)
+    )
 
-"status":"erro",
+    conn.commit()
 
-"erro":"Usuário já existe."
+    session["usuario"] = usuario
 
-})
+    cur.close()
+    conn.close()
 
-cur.execute(
-
-"INSERT INTO usuarios(usuario,senha) VALUES(%s,%s)",
-
-(usuario,senha)
-
-)
-
-conn.commit()
-
-session["usuario"]=usuario
-
-cur.close()
-
-conn.close()
-
-return jsonify({
-
-"status":"ok"
-
-})
+    return jsonify({
+        "status": "ok",
+        "usuario": usuario
+    })
 
 
-@app.route("/login",methods=["POST"])
+@app.route("/login", methods=["POST"])
 def login():
 
-dados=request.get_json()
+    dados = request.get_json()
 
-usuario=dados["usuario"]
+    usuario = dados["usuario"]
+    senha = dados["senha"]
 
-senha=dados["senha"]
+    conn = get_db()
+    cur = conn.cursor()
 
-conn=get_db()
+    cur.execute(
+        "SELECT * FROM usuarios WHERE usuario=%s",
+        (usuario,)
+    )
 
-cur=conn.cursor()
+    user = cur.fetchone()
 
-cur.execute(
+    if not user:
 
-"SELECT * FROM usuarios WHERE usuario=%s",
+        cur.close()
+        conn.close()
 
-(usuario,)
+        return jsonify({
+            "status": "erro",
+            "erro": "Conta não encontrada."
+        })
 
-)
+    if user["senha"] != senha:
 
-user=cur.fetchone()
+        cur.close()
+        conn.close()
 
-if not user:
+        return jsonify({
+            "status": "erro",
+            "erro": "Senha incorreta."
+        })
 
-return jsonify({
+    session["usuario"] = usuario
 
-"status":"erro",
+    cur.close()
+    conn.close()
 
-"erro":"Conta não encontrada."
-
-})
-
-if user["senha"] != senha:
-
-return jsonify({
-
-"status":"erro",
-
-"erro":"Senha incorreta."
-
-})
-
-session["usuario"]=usuario
-
-cur.close()
-
-conn.close()
-
-return jsonify({
-
-"status":"ok"
-
-})
+    return jsonify({
+        "status": "ok",
+        "usuario": usuario
+    })
 
 
-if __name__=="__main__":
-app.run(debug=True)
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    return jsonify({
+        "status": "ok"
+    })
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+
+    try:
+
+        if "usuario" not in session:
+
+            return jsonify({
+                "resposta": "Você precisa estar logado."
+            })
+
+        if client is None:
+
+            return jsonify({
+                "resposta": "A API da Groq não foi configurada."
+            })
+
+        dados = request.get_json()
+
+        usuario = session["usuario"]
+        conversa = dados["conversa"]
+        mensagem = dados["mensagem"]
+
+        historico = buscar_historico(usuario)
+
+        risco = analisar_risco_emocional(
+            mensagem,
+            historico
+        )
+
+        profissional = sugerir_profissional(
+            mensagem,
+            risco
+        )
+
+        contexto = resumir_contexto(historico)
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT * FROM conversas WHERE id=%s",
+            (conversa,)
+        )
+
+        existe = cur.fetchone()
+
+        if not existe:
+
+            cur.execute(
+                "INSERT INTO conversas(id, usuario, nome) VALUES (%s,%s,%s)",
+                (
+                    conversa,
+                    usuario,
+                    mensagem[:30]
+                )
+            )
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (
+                conversa,
+                "user",
+                mensagem
+            )
+        )
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(
+            conversa,
+            usuario,
+            "user",
+            mensagem,
+            risco
+        )
+
+        if risco == "crítico":
+
+            resposta_texto = (
+                "💙 Eu percebo que você pode estar passando por algo muito pesado. "
+                "Você não precisa enfrentar isso sozinho. "
+                "Procure agora alguém de confiança, um responsável ou ajuda profissional. "
+                "No Brasil, o CVV atende pelo 188."
+            )
+
+        else:
+
+            prompt = f"""
+Você é o Calmi.
+
+Contexto emocional recente:
+{contexto}
+
+Nível emocional detectado:
+{risco}
+
+Sugestão de apoio:
+{profissional}
+
+Regras:
+- Seja acolhedor.
+- Não diagnostique.
+- Não substitua terapia.
+- Fale em português brasileiro.
+- Responda de forma curta, humana e natural.
+- Em risco elevado, recomende apoio profissional com calma.
+
+Mensagem:
+{mensagem}
+"""
+
+            resposta = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": mensagem
+                    }
+                ]
+            )
+
+            resposta_texto = resposta.choices[0].message.content
+
+            if risco == "elevado":
+
+                resposta_texto += (
+                    "<br><br>💙 Pode ser útil conversar com "
+                    f"{profissional}. Você merece apoio de verdade."
+                )
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (
+                conversa,
+                "bot",
+                resposta_texto
+            )
+        )
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(
+            conversa,
+            usuario,
+            "bot",
+            resposta_texto,
+            risco
+        )
+
+        return jsonify({
+            "resposta": resposta_texto
+        })
+
+    except Exception as erro:
+
+        print(erro)
+
+        return jsonify({
+            "resposta": "Erro ao conectar com a IA 😔"
+        })
+
+
+@app.route("/conversas")
+def listar_conversas():
+
+    if "usuario" not in session:
+
+        return jsonify([])
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT id, nome FROM conversas WHERE usuario=%s ORDER BY nome ASC",
+        (usuario,)
+    )
+
+    resultados = cur.fetchall()
+
+    lista = []
+
+    for conversa in resultados:
+
+        lista.append({
+            "id": conversa["id"],
+            "nome": conversa["nome"]
+        })
+
+    cur.close()
+    conn.close()
+
+    return jsonify(lista)
+
+
+@app.route("/abrir/<id>")
+def abrir(id):
+
+    if "usuario" not in session:
+
+        return jsonify({
+            "mensagens": []
+        })
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT * FROM conversas WHERE id=%s AND usuario=%s",
+        (
+            id,
+            usuario
+        )
+    )
+
+    conversa = cur.fetchone()
+
+    if not conversa:
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "mensagens": []
+        })
+
+    cur.execute(
+        "SELECT tipo, texto FROM mensagens WHERE conversa_id=%s ORDER BY id ASC",
+        (id,)
+    )
+
+    mensagens = cur.fetchall()
+
+    lista = []
+
+    for msg in mensagens:
+
+        lista.append({
+            "tipo": msg["tipo"],
+            "texto": msg["texto"]
+        })
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "mensagens": lista
+    })
+
+
+@app.route("/deletar/<id>")
+def deletar(id):
+
+    if "usuario" not in session:
+
+        return jsonify({
+            "status": "erro"
+        })
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "DELETE FROM mensagens WHERE conversa_id=%s",
+        (id,)
+    )
+
+    cur.execute(
+        "DELETE FROM mensagens_memoria WHERE conversa_id=%s AND usuario=%s",
+        (
+            id,
+            usuario
+        )
+    )
+
+    cur.execute(
+        "DELETE FROM conversas WHERE id=%s AND usuario=%s",
+        (
+            id,
+            usuario
+        )
+    )
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "status": "ok"
+    })
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
