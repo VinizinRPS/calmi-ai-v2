@@ -2171,7 +2171,20 @@ body{
 
 <script>
 let usuarioAtual = "";
-let conversaAtual = crypto.randomUUID();
+
+function gerarUUID(){
+    if(window.crypto && crypto.randomUUID){
+        return crypto.randomUUID();
+    }
+
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c){
+        let r = Math.random() * 16 | 0;
+        let v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+let conversaAtual = gerarUUID();
 let modo = "login";
 let mediaRecorder = null;
 let audioChunks = [];
@@ -2197,17 +2210,21 @@ function mostrarToast(texto){
 }
 
 function aplicarTemaAutomatico(){
-    let temaManual = localStorage.getItem("calmiTemaManual");
-    if(temaManual === "dark"){
-        document.body.classList.add("dark");
-        return;
-    }
-    if(temaManual === "light"){
-        document.body.classList.remove("dark");
-        return;
-    }
-    if(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches){
-        document.body.classList.add("dark");
+    try{
+        let temaManual = localStorage.getItem("calmiTemaManual");
+        if(temaManual === "dark"){
+            document.body.classList.add("dark");
+            return;
+        }
+        if(temaManual === "light"){
+            document.body.classList.remove("dark");
+            return;
+        }
+        if(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches){
+            document.body.classList.add("dark");
+        }
+    }catch(erro){
+        console.log("Tema automático indisponível:", erro);
     }
 }
 
@@ -2310,71 +2327,115 @@ function mudarTab(tipo){
 
 async function enviarAuth(){
 
-    let usuario = document.getElementById("usuario").value;
-    let senha = document.getElementById("senha").value;
+    let usuarioInput = document.getElementById("usuario");
+    let senhaInput = document.getElementById("senha");
+    let erroBox = document.getElementById("erro");
+    let botao = document.getElementById("botaoLogin");
+
+    let usuario = usuarioInput ? usuarioInput.value : "";
+    let senha = senhaInput ? senhaInput.value : "";
 
     if(usuario.trim() === "" || senha.trim() === ""){
 
-        document.getElementById("erro").innerText =
-            "Preencha usuário e senha.";
+        if(erroBox){
+            erroBox.innerText = "Preencha usuário e senha.";
+        }
 
         return;
     }
 
     let rota = modo === "login" ? "/login" : "/cadastro";
 
-    let botao = document.getElementById("botaoLogin");
+    try{
 
-    botao.classList.add("loading");
+        if(botao){
+            botao.classList.add("loading");
+            botao.disabled = true;
+        }
 
-    let resposta = await fetch(rota, {
-        method:"POST",
-        headers:{
-            "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-            usuario,
-            senha
-        })
-    });
+        let resposta = await fetch(rota, {
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json"
+            },
+            credentials:"same-origin",
+            body:JSON.stringify({
+                usuario,
+                senha
+            })
+        });
 
-    let dados = await resposta.json();
+        let dados = await resposta.json();
 
-    botao.classList.remove("loading");
+        if(botao){
+            botao.classList.remove("loading");
+            botao.disabled = false;
+        }
 
-    if(dados.status === "ok"){
+        if(dados.status === "ok"){
 
-        usuarioAtual = dados.usuario || usuario;
+            usuarioAtual = dados.usuario || usuario;
 
-        iniciarApp(usuarioAtual);
+            iniciarApp(usuarioAtual);
 
-        return;
+            return;
+        }
+
+        if(erroBox){
+            erroBox.innerText = dados.erro || "Erro ao entrar.";
+        }
+
+    }catch(erro){
+
+        console.log("Erro login:", erro);
+
+        if(botao){
+            botao.classList.remove("loading");
+            botao.disabled = false;
+        }
+
+        if(erroBox){
+            erroBox.innerText = "Erro ao conectar. Tente recarregar a página.";
+        }
     }
-
-    document.getElementById("erro").innerText =
-        dados.erro || "Erro ao entrar.";
 }
 
 function iniciarApp(usuario){
 
-    usuarioAtual = usuario;
+    try{
 
-    document.getElementById("login").style.display = "none";
+        usuarioAtual = usuario;
 
-    document.getElementById("nomeUsuario").innerText = usuario;
+        let telaLogin = document.getElementById("login");
+        if(telaLogin){
+            telaLogin.style.display = "none";
+        }
 
-    let nomeMobile = document.getElementById("nomeUsuarioMobile");
-    if(nomeMobile){
-        nomeMobile.innerText = usuario;
+        let nomeUsuario = document.getElementById("nomeUsuario");
+        if(nomeUsuario){
+            nomeUsuario.innerText = usuario;
+        }
+
+        let nomeMobile = document.getElementById("nomeUsuarioMobile");
+        if(nomeMobile){
+            nomeMobile.innerText = usuario;
+        }
+
+        atualizarAvatarInicial(usuario);
+
+        carregarFotoPerfil().catch(() => {});
+        novaConversa();
+        carregarConversas();
+
+    }catch(erro){
+
+        console.log("Erro ao iniciar app:", erro);
+
+        let telaLogin = document.getElementById("login");
+        if(telaLogin){
+            telaLogin.style.display = "none";
+        }
     }
-
-    atualizarAvatarInicial(usuario);
-
-    carregarFotoPerfil();
-
-    novaConversa();
-
-    carregarConversas();
 }
 
 function animarAvatar(el){
@@ -2477,12 +2538,19 @@ document.addEventListener("click", function(e){
 
 async function carregarFotoPerfil(){
 
-    let resposta = await fetch("/perfil");
-    let dados = await resposta.json();
+    try{
 
-    if(dados.foto_perfil){
-        aplicarFotoPerfil(dados.foto_perfil);
-    }else{
+        let resposta = await fetch("/perfil");
+        let dados = await resposta.json();
+
+        if(dados.foto_perfil){
+            aplicarFotoPerfil(dados.foto_perfil);
+        }else{
+            aplicarFotoPerfil(null);
+        }
+
+    }catch(erro){
+        console.log("Erro ao carregar foto:", erro);
         aplicarFotoPerfil(null);
     }
 }
@@ -2528,7 +2596,7 @@ async function alterarFotoPerfil(inputArquivo){
 
 function verificarSessao(){
 
-    fetch("/session")
+    fetch("/session", {credentials:"same-origin"})
     .then(res => res.json())
     .then(dados => {
 
@@ -2537,6 +2605,9 @@ function verificarSessao(){
             iniciarApp(dados.usuario);
 
         }
+    })
+    .catch(erro => {
+        console.log("Sem sessão ativa:", erro);
     });
 }
 
@@ -2562,7 +2633,7 @@ function toggleMenuMobile(){
 
 function novaConversa(){
 
-    conversaAtual = crypto.randomUUID();
+    conversaAtual = gerarUUID();
 
     document.getElementById("titulo").innerText = "Nova conversa";
 
