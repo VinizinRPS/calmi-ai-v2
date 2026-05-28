@@ -3,10 +3,12 @@ from groq import Groq
 import psycopg2
 import psycopg2.extras
 import os
+import base64
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "calmi-dev-secret")
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024  # limite de 4MB para uploads
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -521,6 +523,19 @@ body{
     word-wrap:break-word;
 }
 
+.preview-img{
+    max-width:230px;
+    max-height:230px;
+    border-radius:14px;
+    display:block;
+    margin-top:8px;
+}
+
+.attach-btn{
+    padding:14px 16px !important;
+    background:#111827 !important;
+}
+
 .user{
     margin-left:auto;
     color:white;
@@ -809,6 +824,11 @@ body{
         border-radius:16px;
     }
 
+    .preview-img{
+        max-width:180px;
+        max-height:180px;
+    }
+
     .input-area{
         position:fixed;
         bottom:0;
@@ -1016,6 +1036,18 @@ body{
         </div>
 
         <div class="input-area">
+
+            <button class="attach-btn" type="button" onclick="document.getElementById('imagemInput').click()">
+                📷
+            </button>
+
+            <input
+                type="file"
+                id="imagemInput"
+                accept="image/png,image/jpeg,image/webp"
+                style="display:none"
+                onchange="enviarImagem(this)"
+            >
 
             <input
                 type="text"
@@ -1245,6 +1277,74 @@ async function enviarMensagem(){
 
     }, 12);
 
+    carregarConversas();
+}
+
+
+async function enviarImagem(inputArquivo){
+
+    let arquivo = inputArquivo.files[0];
+
+    if(!arquivo){
+        return;
+    }
+
+    if(arquivo.size > 4 * 1024 * 1024){
+        alert("A imagem precisa ter até 4MB.");
+        inputArquivo.value = "";
+        return;
+    }
+
+    let chat = document.getElementById("chat");
+    let imagemURL = URL.createObjectURL(arquivo);
+
+    chat.innerHTML += `
+        <div class="message user">
+            Imagem enviada 📷
+            <img class="preview-img" src="${imagemURL}">
+        </div>
+    `;
+
+    let botDiv = document.createElement("div");
+    botDiv.className = "message bot";
+    botDiv.innerHTML = `
+        <div class="typing">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    `;
+
+    chat.appendChild(botDiv);
+    chat.scrollTop = chat.scrollHeight;
+
+    let formData = new FormData();
+    formData.append("conversa", conversaAtual);
+    formData.append("imagem", arquivo);
+
+    let resposta = await fetch("/imagem", {
+        method:"POST",
+        body:formData
+    });
+
+    let dados = await resposta.json();
+
+    botDiv.innerHTML = "";
+
+    let texto = dados.resposta || "Não consegui analisar essa imagem agora.";
+    let i = 0;
+
+    let intervalo = setInterval(() => {
+        botDiv.innerHTML += texto[i];
+        i++;
+        chat.scrollTop = chat.scrollHeight;
+
+        if(i >= texto.length){
+            clearInterval(intervalo);
+        }
+    }, 12);
+
+    inputArquivo.value = "";
     carregarConversas();
 }
 
@@ -1646,6 +1746,168 @@ Mensagem:
 
         return jsonify({
             "resposta": "Erro ao conectar com a IA 😔"
+        })
+
+
+
+@app.route("/imagem", methods=["POST"])
+def analisar_imagem():
+
+    try:
+
+        if "usuario" not in session:
+
+            return jsonify({
+                "resposta": "Você precisa estar logado."
+            })
+
+        if client is None:
+
+            return jsonify({
+                "resposta": "A API da Groq não foi configurada."
+            })
+
+        usuario = session["usuario"]
+        conversa = request.form.get("conversa")
+        imagem = request.files.get("imagem")
+
+        if not conversa:
+            return jsonify({"resposta": "Conversa não encontrada."})
+
+        if not imagem:
+            return jsonify({"resposta": "Nenhuma imagem foi enviada."})
+
+        if imagem.mimetype not in ["image/jpeg", "image/png", "image/webp"]:
+            return jsonify({"resposta": "Envie uma imagem JPG, PNG ou WEBP."})
+
+        imagem_bytes = imagem.read()
+
+        if len(imagem_bytes) > 4 * 1024 * 1024:
+            return jsonify({"resposta": "A imagem é muito grande. Envie uma imagem de até 4MB."})
+
+        base64_image = base64.b64encode(imagem_bytes).decode("utf-8")
+        data_url = f"data:{imagem.mimetype};base64,{base64_image}"
+
+        historico = buscar_historico(usuario)
+        contexto = resumir_contexto(historico)
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT * FROM conversas WHERE id=%s",
+            (conversa,)
+        )
+
+        existe = cur.fetchone()
+
+        if not existe:
+
+            cur.execute(
+                "INSERT INTO conversas(id, usuario, nome) VALUES (%s,%s,%s)",
+                (
+                    conversa,
+                    usuario,
+                    "Imagem enviada"
+                )
+            )
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (
+                conversa,
+                "user",
+                "📷 Imagem enviada"
+            )
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(
+            conversa,
+            usuario,
+            "user",
+            "Imagem enviada para análise.",
+            "leve"
+        )
+
+        prompt = f"""
+Você é o Calmi, uma IA emocional acolhedora.
+
+Contexto emocional recente do usuário:
+{contexto}
+
+Analise a imagem enviada de forma cuidadosa e útil.
+Regras:
+- Responda em português brasileiro.
+- Descreva o que você consegue observar na imagem.
+- Se a imagem parecer relacionada a emoção, ambiente, estudo, trabalho ou rotina, comente de forma acolhedora.
+- Não identifique pessoas reais na imagem.
+- Não faça diagnósticos médicos, psicológicos ou legais pela imagem.
+- Se a imagem mostrar algo preocupante, recomende buscar ajuda humana/profissional de forma calma.
+- Seja breve, claro e gentil.
+"""
+
+        resposta = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": data_url
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_completion_tokens=700
+        )
+
+        resposta_texto = resposta.choices[0].message.content
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        cur.execute(
+            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
+            (
+                conversa,
+                "bot",
+                resposta_texto
+            )
+        )
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        salvar_mensagem(
+            conversa,
+            usuario,
+            "bot",
+            resposta_texto,
+            "leve"
+        )
+
+        return jsonify({
+            "resposta": resposta_texto
+        })
+
+    except Exception as erro:
+
+        print(erro)
+
+        return jsonify({
+            "resposta": "Erro ao analisar a imagem 😔"
         })
 
 
