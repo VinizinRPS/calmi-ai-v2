@@ -85,13 +85,16 @@ def buscar_historico(usuario, limite=20):
     """, (usuario, limite))
 
     dados = cur.fetchall()
+
     cur.close()
     conn.close()
+
     return dados
 
 
 def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
     agora = datetime.now()
+
     conn = get_db()
     cur = conn.cursor()
 
@@ -116,6 +119,7 @@ def salvar_mensagem(conversa_id, usuario, remetente, conteudo, nivel_emocional):
 
 def analisar_risco_emocional(texto, historico):
     texto = texto.lower()
+
     pontos = 0
 
     leve = ["cansado", "triste", "preocupado", "desanimado"]
@@ -151,10 +155,13 @@ def analisar_risco_emocional(texto, historico):
 
     if pontos >= 8:
         return "crítico"
+
     if pontos >= 5:
         return "elevado"
+
     if pontos >= 2:
         return "moderado"
+
     return "leve"
 
 
@@ -183,7 +190,12 @@ def resumir_contexto(historico):
     if not historico:
         return "Sem histórico emocional anterior."
 
-    textos = [h["conteudo"].lower() for h in historico if h["remetente"] == "user"]
+    textos = [
+        h["conteudo"].lower()
+        for h in historico
+        if h["remetente"] == "user"
+    ]
+
     resumo = ""
 
     if any("cansado" in t for t in textos):
@@ -207,7 +219,11 @@ HTML = """
 <title>Calmi AI</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
 :root{
     --roxo:#4F46E5;
@@ -243,7 +259,11 @@ body{
     flex-direction:column;
 }
 
-.logo{text-align:center;padding:18px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo{
+    text-align:center;
+    padding:18px;
+    border-bottom:1px solid rgba(255,255,255,.1);
+}
 
 .logo h1{
     font-size:46px;
@@ -252,7 +272,11 @@ body{
     color:transparent;
 }
 
-.logo p{color:#CBD5E1;font-size:14px;margin-top:5px}
+.logo p{
+    color:#CBD5E1;
+    font-size:14px;
+    margin-top:5px;
+}
 
 .profile{
     margin-top:18px;
@@ -276,9 +300,14 @@ body{
     font-size:22px;
 }
 
-.status{color:#86EFAC;font-size:12px;margin-top:4px}
+.status{
+    color:#86EFAC;
+    font-size:12px;
+    margin-top:4px;
+}
 
-.new-chat button,.logout-btn{
+.new-chat button,
+.logout-btn{
     width:100%;
     margin-top:14px;
     padding:14px;
@@ -289,8 +318,13 @@ body{
     cursor:pointer;
 }
 
-.new-chat button{background:linear-gradient(135deg,var(--roxo),var(--roxo2))}
-.logout-btn{background:#EF4444}
+.new-chat button{
+    background:linear-gradient(135deg,var(--roxo),var(--roxo2));
+}
+
+.logout-btn{
+    background:#EF4444;
+}
 
 .chats{
     flex:1;
@@ -340,12 +374,23 @@ body{
     align-items:center;
 }
 
-.top h2{color:var(--roxo)}
-.subtitle{color:#64748B;font-size:13px;margin-top:4px}
+.top h2{
+    color:var(--roxo);
+}
 
-.top-actions{display:flex;gap:8px}
+.subtitle{
+    color:#64748B;
+    font-size:13px;
+    margin-top:4px;
+}
 
-.tema-btn,.mobile-menu-btn{
+.top-actions{
+    display:flex;
+    gap:8px;
+}
+
+.tema-btn,
+.mobile-menu-btn{
     border:none;
     padding:11px 14px;
     border-radius:14px;
@@ -354,9 +399,14 @@ body{
     cursor:pointer;
 }
 
-.mobile-menu-btn{display:none;background:linear-gradient(135deg,var(--roxo),var(--azul))}
+.mobile-menu-btn{
+    display:none;
+    background:linear-gradient(135deg,var(--roxo),var(--azul));
+}
 
-.mobile-menu{display:none}
+.mobile-menu{
+    display:none;
+}
 
 .chat{
     flex:1;
@@ -384,170 +434,233 @@ body{
     color:#111827;
     box-shadow:0 10px 25px rgba(0,0,0,.08);
 }
-
-.typing{display:flex;gap:5px}
-
-.dot{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    background:#7C3AED;
-    animation:dot 1s infinite ease-in-out;
+.typing{
+display:flex;
+gap:5px;
 }
 
-.dot:nth-child(2){animation-delay:.15s}
-.dot:nth-child(3){animation-delay:.3s}
+.dot{
+width:7px;
+height:7px;
+border-radius:50%;
+background:#7C3AED;
+animation:dot 1s infinite ease-in-out;
+}
+
+.dot:nth-child(2){
+animation-delay:.15s;
+}
+
+.dot:nth-child(3){
+animation-delay:.3s;
+}
 
 @keyframes dot{
-    0%,80%,100%{opacity:.4;transform:scale(.7)}
-    40%{opacity:1;transform:scale(1)}
+0%,80%,100%{
+opacity:.4;
+transform:scale(.7);
+}
+
+40%{
+opacity:1;
+transform:scale(1);
+}
 }
 
 .input-area{
-    display:flex;
-    gap:10px;
-    padding:14px;
-    background:white;
-    border-top:1px solid rgba(0,0,0,.06);
+display:flex;
+gap:10px;
+padding:14px;
+background:white;
+border-top:1px solid rgba(0,0,0,.06);
 }
 
 .input-area input{
-    flex:1;
-    min-width:0;
-    padding:14px;
-    border:none;
-    border-radius:15px;
-    background:#F1F5F9;
-    font-size:15px;
-    outline:none;
+flex:1;
+padding:14px;
+border:none;
+border-radius:15px;
+background:#F1F5F9;
+outline:none;
 }
 
 .input-area button{
-    border:none;
-    padding:14px 22px;
-    border-radius:15px;
-    background:linear-gradient(135deg,var(--azul),var(--roxo));
-    color:white;
-    font-weight:bold;
-    cursor:pointer;
+border:none;
+padding:14px 22px;
+border-radius:15px;
+background:linear-gradient(135deg,var(--azul),var(--roxo));
+color:white;
+font-weight:bold;
+cursor:pointer;
 }
 
-.dark .main{background:#0F172A}
-.dark .top,.dark .input-area{background:#111827;color:white}
-.dark .bot{background:#1F2937;color:white}
-.dark .input-area input{background:#1F2937;color:white}
-
 .login{
-    position:fixed;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:999;
-    background:
-    radial-gradient(circle at top left,#7C3AED,transparent 35%),
-    radial-gradient(circle at bottom right,#06B6D4,transparent 35%),
-    #0F172A;
+position:fixed;
+inset:0;
+display:flex;
+align-items:center;
+justify-content:center;
+background:
+radial-gradient(circle at top left,#7C3AED,transparent 35%),
+radial-gradient(circle at bottom right,#06B6D4,transparent 35%),
+#0F172A;
+z-index:999;
 }
 
 .login-box{
-    width:420px;
-    background:rgba(255,255,255,.94);
-    padding:38px;
-    border-radius:30px;
-    text-align:center;
+width:430px;
+background:rgba(255,255,255,.95);
+padding:40px;
+border-radius:30px;
+text-align:center;
+}
+
+.tabs{
+display:flex;
+gap:10px;
+margin-bottom:25px;
+}
+
+.tab{
+flex:1;
+padding:12px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.activeTab{
+background:linear-gradient(135deg,var(--roxo),var(--azul));
+color:white;
 }
 
 .login-box h1{
-    font-size:56px;
-    background:linear-gradient(135deg,var(--roxo),var(--roxo2),var(--azul));
-    -webkit-background-clip:text;
-    color:transparent;
-}
+font-size:56px;
 
-.login-box p{color:#64748B;margin-bottom:24px}
+background:
+linear-gradient(
+135deg,
+var(--roxo),
+var(--roxo2),
+var(--azul)
+);
+
+-webkit-background-clip:text;
+
+color:transparent;
+}
 
 .login-box input{
-    width:100%;
-    padding:15px;
-    border:none;
-    background:#F1F5F9;
-    border-radius:16px;
-    margin-top:12px;
+
+width:100%;
+
+padding:15px;
+
+margin-top:12px;
+
+border:none;
+
+border-radius:15px;
+
+background:#F1F5F9;
+
+outline:none;
+
 }
 
-.login-box button{
-    width:100%;
-    margin-top:18px;
-    padding:15px;
-    border:none;
-    border-radius:16px;
-    background:linear-gradient(135deg,var(--roxo),var(--azul));
-    color:white;
-    cursor:pointer;
-    font-weight:bold;
+.login-btn{
+
+width:100%;
+
+padding:15px;
+
+margin-top:18px;
+
+border:none;
+
+border-radius:15px;
+
+background:
+linear-gradient(
+135deg,
+var(--roxo),
+var(--azul)
+);
+
+color:white;
+
+font-weight:bold;
+
+cursor:pointer;
+
+}
+
+.error{
+
+margin-top:12px;
+
+color:red;
+
+font-size:14px;
+
+}
+
+.loading{
+
+opacity:.7;
+
+pointer-events:none;
+
 }
 
 @media(max-width:800px){
-    .container{height:100vh;display:block;padding:0}
-    .sidebar{display:none}
-    .main{width:100%;height:100vh;border-radius:0}
-    .top{padding:14px}
-    .top h2{font-size:19px}
-    .subtitle{font-size:12px}
-    .mobile-menu-btn{display:block}
-    .mobile-menu{
-        display:flex;
-        flex-direction:column;
-        position:fixed;
-        top:0;
-        left:-86%;
-        width:84%;
-        height:100vh;
-        background:#111827;
-        color:white;
-        z-index:1000;
-        padding:18px;
-        transition:.3s ease;
-    }
-    .mobile-menu.open{left:0}
-    .mobile-menu-header{
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:18px;
-    }
-    .mobile-menu-header button{
-        border:none;
-        width:34px;
-        height:34px;
-        border-radius:50%;
-        background:#EF4444;
-        color:white;
-    }
-    .mobile-new-chat{
-        width:100%;
-        padding:14px;
-        border:none;
-        border-radius:14px;
-        background:linear-gradient(135deg,var(--roxo),var(--azul));
-        color:white;
-        font-weight:bold;
-        margin-bottom:14px;
-    }
-    .chat{padding:14px;padding-bottom:86px}
-    .message{max-width:90%;font-size:14px}
-    .input-area{
-        position:fixed;
-        bottom:0;
-        left:0;
-        right:0;
-        z-index:60;
-        padding:10px;
-        background:white;
-    }
-    .login-box{width:90%;padding:28px}
-    .login-box h1{font-size:46px}
+
+.container{
+padding:0;
+display:block;
+}
+
+.sidebar{
+display:none;
+}
+
+.main{
+width:100%;
+height:100vh;
+border-radius:0;
+}
+
+.mobile-menu-btn{
+display:block;
+}
+
+.chat{
+padding:14px;
+padding-bottom:90px;
+}
+
+.message{
+max-width:90%;
+font-size:14px;
+}
+
+.input-area{
+position:fixed;
+left:0;
+right:0;
+bottom:0;
+}
+
+.login-box{
+width:92%;
+padding:30px;
+}
+
+.login-box h1{
+font-size:45px;
+}
+
 }
 </style>
 </head>
@@ -555,554 +668,291 @@ body{
 <body>
 
 <div class="login" id="login">
-    <div class="login-box">
-        <h1>Calmi</h1>
-        <p>Sua IA emocional 💙</p>
-        <input type="text" id="usuario" placeholder="Usuário">
-        <input type="password" id="senha" placeholder="Senha">
-        <button onclick="login()">Entrar</button>
-    </div>
+
+<div class="login-box">
+
+<h1>Calmi</h1>
+
+<p>
+Sua IA emocional 💙
+</p>
+
+<div class="tabs">
+
+<button
+class="tab activeTab"
+id="tabLogin"
+onclick="mudarTab('login')"
+>
+Entrar
+</button>
+
+<button
+class="tab"
+id="tabCadastro"
+onclick="mudarTab('cadastro')"
+>
+Cadastrar
+</button>
+
 </div>
 
-<div class="mobile-menu" id="mobileMenu">
-    <div class="mobile-menu-header">
-        <h2>Calmi</h2>
-        <button onclick="toggleMenuMobile()">✕</button>
-    </div>
+<input
+id="usuario"
+placeholder="Usuário"
+>
 
-    <button class="mobile-new-chat" onclick="novaConversaMobile()">+ Nova conversa</button>
-    <button class="logout-btn" onclick="logout()">Sair da conta</button>
+<input
+id="senha"
+type="password"
+placeholder="Senha"
+>
 
-    <br>
-    <h3>Histórico</h3>
-    <br>
-    <div id="listaChatsMobile"></div>
+<div class="error" id="erro"></div>
+
+<button
+class="login-btn"
+id="botaoLogin"
+onclick="enviarAuth()"
+>
+
+Entrar
+
+</button>
+
 </div>
 
-<div class="container">
-
-    <div class="sidebar">
-        <div class="logo">
-            <h1>Calmi</h1>
-            <p>IA emocional inteligente</p>
-        </div>
-
-        <div class="profile">
-            <div class="avatar" id="avatar">C</div>
-            <div>
-                <h3 id="nomeUsuario">Usuário</h3>
-                <div class="status">● Online</div>
-            </div>
-        </div>
-
-        <div class="new-chat">
-            <button onclick="novaConversa()">+ Nova conversa</button>
-        </div>
-
-        <button class="logout-btn" onclick="logout()">Sair da conta</button>
-
-        <div class="chats" id="listaChats"></div>
-    </div>
-
-    <div class="main">
-        <div class="top">
-            <div>
-                <h2 id="titulo">Nova conversa</h2>
-                <div class="subtitle">O Calmi está aqui para te ouvir 💙</div>
-            </div>
-
-            <div class="top-actions">
-                <button class="mobile-menu-btn" onclick="toggleMenuMobile()">☰</button>
-                <button class="tema-btn" onclick="toggleTema()">🌙</button>
-            </div>
-        </div>
-
-        <div class="chat" id="chat">
-            <div class="message bot">
-                Olá 😊 Eu sou o Calmi.<br><br>
-                Como você está se sentindo hoje?
-            </div>
-        </div>
-
-        <div class="input-area">
-            <input type="text" id="mensagem" placeholder="Digite sua mensagem..." autocomplete="off">
-            <button onclick="enviarMensagem()">Enviar</button>
-        </div>
-    </div>
 </div>
+
+""" + HTML.split("</body>")[0].split("<body>")[1] + """
 
 <script>
-let usuarioAtual="";
-let conversaAtual=crypto.randomUUID();
 
-function toggleTema(){
-    document.body.classList.toggle("dark");
+let modo="login";
+
+function mudarTab(tipo){
+
+modo=tipo;
+
+document
+.getElementById("tabLogin")
+.classList.remove("activeTab");
+
+document
+.getElementById("tabCadastro")
+.classList.remove("activeTab");
+
+if(tipo=="login"){
+
+document
+.getElementById("tabLogin")
+.classList.add("activeTab");
+
+document
+.getElementById("botaoLogin")
+.innerText="Entrar";
+
+}else{
+
+document
+.getElementById("tabCadastro")
+.classList.add("activeTab");
+
+document
+.getElementById("botaoLogin")
+.innerText="Criar Conta";
+
 }
 
-function toggleMenuMobile(){
-    document.getElementById("mobileMenu").classList.toggle("open");
+document
+.getElementById("erro")
+.innerText="";
+
 }
 
-function verificarSessao(){
-    fetch("/session")
-    .then(res=>res.json())
-    .then(dados=>{
-        if(dados.logado){
-            usuarioAtual=dados.usuario;
-            document.getElementById("login").style.display="none";
-            document.getElementById("nomeUsuario").innerText=usuarioAtual;
-            document.getElementById("avatar").innerText=usuarioAtual[0].toUpperCase();
-            novaConversa();
-            carregarConversas();
-        }
-    });
+async function enviarAuth(){
+
+let usuario=
+document.getElementById("usuario").value;
+
+let senha=
+document.getElementById("senha").value;
+
+if(usuario.trim()=="" || senha.trim()==""){
+
+document
+.getElementById("erro")
+.innerText="Preencha tudo.";
+
+return;
+
 }
 
-function login(){
-    let usuario=document.getElementById("usuario").value;
-    let senha=document.getElementById("senha").value;
+let rota=
+modo=="login"
+?"/login"
+:"/cadastro";
 
-    if(usuario.trim()==="" || senha.trim()===""){
-        alert("Preencha usuário e senha.");
-        return;
-    }
+let botao=
+document.getElementById("botaoLogin");
 
-    fetch("/login",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({usuario,senha})
-    })
-    .then(res=>res.json())
-    .then(dados=>{
-        if(dados.status==="ok"){
-            usuarioAtual=usuario;
-            document.getElementById("login").style.display="none";
-            document.getElementById("nomeUsuario").innerText=usuario;
-            document.getElementById("avatar").innerText=usuario[0].toUpperCase();
-            novaConversa();
-            carregarConversas();
-        }else{
-            alert("Senha incorreta.");
-        }
-    });
+botao.classList.add("loading");
+
+let req=
+await fetch(
+rota,
+{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+usuario,
+senha
+})
+
 }
 
-function logout(){
-    fetch("/logout")
-    .then(()=>{
-        location.reload();
-    });
+);
+
+let dados=
+await req.json();
+
+botao.classList.remove("loading");
+
+if(dados.status=="ok"){
+
+location.reload();
+
+return;
+
 }
 
-function novaConversa(){
-    conversaAtual=crypto.randomUUID();
-    document.getElementById("titulo").innerText="Nova conversa";
-    document.getElementById("chat").innerHTML=`
-        <div class="message bot">
-            Olá 😊 Eu sou o Calmi.<br><br>
-            Como você está se sentindo hoje?
-        </div>
-    `;
+document
+.getElementById("erro")
+.innerText=dados.erro;
+
 }
 
-function novaConversaMobile(){
-    novaConversa();
-    document.getElementById("mobileMenu").classList.remove("open");
-}
-
-async function enviarMensagem(){
-    let input=document.getElementById("mensagem");
-    let mensagem=input.value;
-
-    if(mensagem.trim()==="") return;
-
-    let chat=document.getElementById("chat");
-
-    chat.innerHTML+=`
-        <div class="message user">
-            ${mensagem}
-        </div>
-    `;
-
-    input.value="";
-
-    let botDiv=document.createElement("div");
-    botDiv.className="message bot";
-    botDiv.innerHTML=`
-        <div class="typing">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-        </div>
-    `;
-
-    chat.appendChild(botDiv);
-    chat.scrollTop=chat.scrollHeight;
-
-    let resposta=await fetch("/chat",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-            conversa:conversaAtual,
-            mensagem:mensagem
-        })
-    });
-
-    let dados=await resposta.json();
-
-    botDiv.innerHTML="";
-
-    let texto=dados.resposta || "Não consegui responder agora.";
-    let i=0;
-
-    let intervalo=setInterval(()=>{
-        botDiv.innerHTML+=texto[i];
-        i++;
-        chat.scrollTop=chat.scrollHeight;
-
-        if(i>=texto.length){
-            clearInterval(intervalo);
-        }
-    },12);
-
-    carregarConversas();
-}
-
-function carregarConversas(){
-    fetch("/conversas")
-    .then(res=>res.json())
-    .then(dados=>{
-        let lista=document.getElementById("listaChats");
-        let listaMobile=document.getElementById("listaChatsMobile");
-
-        if(lista) lista.innerHTML="";
-        if(listaMobile) listaMobile.innerHTML="";
-
-        dados.forEach(conversa=>{
-            let item=`
-                <div class="chat-item">
-                    <div onclick="abrirConversa('${conversa.id}')">
-                        ${conversa.nome}
-                    </div>
-                    <button class="delete-btn" onclick="deletarConversa('${conversa.id}')">x</button>
-                </div>
-            `;
-
-            if(lista) lista.innerHTML+=item;
-            if(listaMobile) listaMobile.innerHTML+=item;
-        });
-    });
-}
-
-function abrirConversa(id){
-    fetch("/abrir/"+id)
-    .then(res=>res.json())
-    .then(dados=>{
-        conversaAtual=id;
-        document.getElementById("mobileMenu").classList.remove("open");
-
-        let chat=document.getElementById("chat");
-        chat.innerHTML="";
-
-        dados.mensagens.forEach(msg=>{
-            chat.innerHTML+=`
-                <div class="message ${msg.tipo}">
-                    ${msg.texto}
-                </div>
-            `;
-        });
-
-        chat.scrollTop=chat.scrollHeight;
-    });
-}
-
-function deletarConversa(id){
-    fetch("/deletar/"+id)
-    .then(()=>{
-        carregarConversas();
-        novaConversa();
-    });
-}
-
-document.getElementById("mensagem").addEventListener("keypress",function(e){
-    if(e.key==="Enter"){
-        enviarMensagem();
-    }
-});
-
-verificarSessao();
 </script>
 
 </body>
+
 </html>
 """
 
-@app.route("/")
-def home():
-    return render_template_string(HTML)
+
+@app.route("/cadastro",methods=["POST"])
+def cadastro():
+
+dados=request.get_json()
+
+usuario=dados["usuario"]
+
+senha=dados["senha"]
+
+conn=get_db()
+
+cur=conn.cursor()
+
+cur.execute(
+"SELECT * FROM usuarios WHERE usuario=%s",
+(usuario,)
+)
+
+existe=cur.fetchone()
+
+if existe:
+
+return jsonify({
+
+"status":"erro",
+
+"erro":"Usuário já existe."
+
+})
+
+cur.execute(
+
+"INSERT INTO usuarios(usuario,senha) VALUES(%s,%s)",
+
+(usuario,senha)
+
+)
+
+conn.commit()
+
+session["usuario"]=usuario
+
+cur.close()
+
+conn.close()
+
+return jsonify({
+
+"status":"ok"
+
+})
 
 
-@app.route("/session")
-def verificar_session():
-    if "usuario" in session:
-        return jsonify({"logado": True, "usuario": session["usuario"]})
-    return jsonify({"logado": False})
-
-
-@app.route("/login", methods=["POST"])
+@app.route("/login",methods=["POST"])
 def login():
-    dados = request.get_json()
-    usuario = dados["usuario"]
-    senha = dados["senha"]
-
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("SELECT * FROM usuarios WHERE usuario=%s", (usuario,))
-    existe = cur.fetchone()
-
-    if existe:
-        if existe["senha"] != senha:
-            cur.close()
-            conn.close()
-            return jsonify({"status": "erro"})
-    else:
-        cur.execute(
-            "INSERT INTO usuarios(usuario, senha) VALUES (%s,%s)",
-            (usuario, senha)
-        )
-        conn.commit()
-
-    session["usuario"] = usuario
-
-    cur.close()
-    conn.close()
-
-    return jsonify({"status": "ok"})
-
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return jsonify({"status": "ok"})
-
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    try:
-        if "usuario" not in session:
-            return jsonify({"resposta": "Você precisa estar logado."})
-
-        if client is None:
-            return jsonify({"resposta": "A API da Groq não foi configurada."})
-
-        dados = request.get_json()
-        usuario = session["usuario"]
-        conversa = dados["conversa"]
-        mensagem = dados["mensagem"]
-
-        historico = buscar_historico(usuario)
-        risco = analisar_risco_emocional(mensagem, historico)
-        profissional = sugerir_profissional(mensagem, risco)
-        contexto = resumir_contexto(historico)
-
-        conn = get_db()
-        cur = conn.cursor()
-
-        cur.execute("SELECT * FROM conversas WHERE id=%s", (conversa,))
-        existe = cur.fetchone()
-
-        if not existe:
-            cur.execute(
-                "INSERT INTO conversas(id, usuario, nome) VALUES (%s,%s,%s)",
-                (conversa, usuario, mensagem[:30])
-            )
 
-        cur.execute(
-            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
-            (conversa, "user", mensagem)
-        )
-
-        conn.commit()
-        cur.close()
-        conn.close()
+dados=request.get_json()
 
-        salvar_mensagem(conversa, usuario, "user", mensagem, risco)
+usuario=dados["usuario"]
 
-        if risco == "crítico":
-            resposta_texto = (
-                "💙 Eu percebo que você pode estar passando por algo muito pesado. "
-                "Você não precisa enfrentar isso sozinho. "
-                "Procure agora alguém de confiança, um responsável ou ajuda profissional. "
-                "No Brasil, o CVV atende pelo 188."
-            )
-        else:
-            prompt = f"""
-Você é o Calmi.
+senha=dados["senha"]
 
-Contexto emocional recente:
-{contexto}
+conn=get_db()
 
-Nível emocional detectado:
-{risco}
+cur=conn.cursor()
 
-Sugestão de apoio:
-{profissional}
+cur.execute(
 
-Regras:
-- Seja acolhedor.
-- Não diagnostique.
-- Não substitua terapia.
-- Fale em português brasileiro.
-- Responda de forma curta, humana e natural.
-- Em risco elevado, recomende apoio profissional com calma.
+"SELECT * FROM usuarios WHERE usuario=%s",
 
-Mensagem:
-{mensagem}
-"""
+(usuario,)
 
-            resposta = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": mensagem}
-                ]
-            )
+)
 
-            resposta_texto = resposta.choices[0].message.content
+user=cur.fetchone()
 
-            if risco == "elevado":
-                resposta_texto += (
-                    "<br><br>💙 Pode ser útil conversar com "
-                    f"{profissional}. Você merece apoio de verdade."
-                )
+if not user:
 
-        conn = get_db()
-        cur = conn.cursor()
+return jsonify({
 
-        cur.execute(
-            "INSERT INTO mensagens(conversa_id, tipo, texto) VALUES (%s,%s,%s)",
-            (conversa, "bot", resposta_texto)
-        )
+"status":"erro",
 
-        conn.commit()
-        cur.close()
-        conn.close()
+"erro":"Conta não encontrada."
 
-        salvar_mensagem(conversa, usuario, "bot", resposta_texto, risco)
+})
 
-        return jsonify({"resposta": resposta_texto})
+if user["senha"] != senha:
 
-    except Exception as erro:
-        print(erro)
-        return jsonify({"resposta": "Erro ao conectar com a IA 😔"})
+return jsonify({
 
+"status":"erro",
 
-@app.route("/conversas")
-def listar_conversas():
-    if "usuario" not in session:
-        return jsonify([])
+"erro":"Senha incorreta."
 
-    usuario = session["usuario"]
+})
 
-    conn = get_db()
-    cur = conn.cursor()
+session["usuario"]=usuario
 
-    cur.execute(
-        "SELECT id, nome FROM conversas WHERE usuario=%s ORDER BY nome ASC",
-        (usuario,)
-    )
+cur.close()
 
-    resultados = cur.fetchall()
+conn.close()
 
-    lista = []
+return jsonify({
 
-    for conversa in resultados:
-        lista.append({
-            "id": conversa["id"],
-            "nome": conversa["nome"]
-        })
+"status":"ok"
 
-    cur.close()
-    conn.close()
+})
 
-    return jsonify(lista)
 
-
-@app.route("/abrir/<id>")
-def abrir(id):
-    if "usuario" not in session:
-        return jsonify({"mensagens": []})
-
-    usuario = session["usuario"]
-
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute(
-        "SELECT * FROM conversas WHERE id=%s AND usuario=%s",
-        (id, usuario)
-    )
-
-    conversa = cur.fetchone()
-
-    if not conversa:
-        cur.close()
-        conn.close()
-        return jsonify({"mensagens": []})
-
-    cur.execute(
-        "SELECT tipo, texto FROM mensagens WHERE conversa_id=%s ORDER BY id ASC",
-        (id,)
-    )
-
-    mensagens = cur.fetchall()
-
-    lista = []
-
-    for msg in mensagens:
-        lista.append({
-            "tipo": msg["tipo"],
-            "texto": msg["texto"]
-        })
-
-    cur.close()
-    conn.close()
-
-    return jsonify({"mensagens": lista})
-
-
-@app.route("/deletar/<id>")
-def deletar(id):
-    if "usuario" not in session:
-        return jsonify({"status": "erro"})
-
-    usuario = session["usuario"]
-
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute(
-        "DELETE FROM mensagens WHERE conversa_id=%s",
-        (id,)
-    )
-
-    cur.execute(
-        "DELETE FROM mensagens_memoria WHERE conversa_id=%s AND usuario=%s",
-        (id, usuario)
-    )
-
-    cur.execute(
-        "DELETE FROM conversas WHERE id=%s AND usuario=%s",
-        (id, usuario)
-    )
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    return jsonify({"status": "ok"})
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__=="__main__":
+app.run(debug=True)
