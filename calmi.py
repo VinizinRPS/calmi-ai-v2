@@ -60,6 +60,11 @@ def init_db():
     )
     """)
 
+    try:
+        cur.execute("ALTER TABLE conversas ADD COLUMN IF NOT EXISTS fixada BOOLEAN DEFAULT FALSE")
+    except Exception:
+        pass
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS mensagens (
         id SERIAL PRIMARY KEY,
@@ -1522,6 +1527,143 @@ body{
     }
 }
 
+
+
+/* Melhorias de experiência */
+.chat-search{
+    width:100%;
+    margin-top:14px;
+    padding:12px 14px;
+    border:none;
+    border-radius:14px;
+    background:#1F2937;
+    color:white;
+    outline:none;
+}
+
+.chat-search::placeholder{
+    color:#94A3B8;
+}
+
+.pin-btn{
+    position:absolute;
+    right:38px;
+    top:50%;
+    transform:translateY(-50%);
+    width:24px;
+    height:24px;
+    border:none;
+    border-radius:50%;
+    background:#334155;
+    color:white;
+    cursor:pointer;
+}
+
+.pin-btn.fixed{
+    background:#F59E0B;
+}
+
+.favorite-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    border:none;
+    margin-top:8px;
+    margin-left:6px;
+    padding:7px 10px;
+    border-radius:10px;
+    background:#FEF3C7;
+    color:#92400E;
+    cursor:pointer;
+}
+
+.favorite-btn.active{
+    background:#F59E0B;
+    color:white;
+}
+
+.speak-btn.listening{
+    background:#DBEAFE;
+    color:#1D4ED8;
+    box-shadow:0 0 0 3px rgba(59,130,246,.12);
+}
+
+.speak-waves{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    margin-left:4px;
+}
+
+.speak-waves span{
+    width:3px;
+    height:8px;
+    border-radius:8px;
+    background:#2563EB;
+    animation:speakWave .7s infinite ease-in-out;
+}
+
+.speak-waves span:nth-child(2){animation-delay:.12s}
+.speak-waves span:nth-child(3){animation-delay:.24s}
+
+@keyframes speakWave{
+    0%,100%{height:6px; opacity:.5}
+    50%{height:14px; opacity:1}
+}
+
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%) translateY(20px);
+    background:#111827;
+    color:white;
+    padding:12px 16px;
+    border-radius:14px;
+    opacity:0;
+    pointer-events:none;
+    z-index:5000;
+    box-shadow:0 18px 50px rgba(0,0,0,.35);
+    transition:.25s ease;
+    max-width:90vw;
+    text-align:center;
+}
+
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+}
+
+.input-area textarea{
+    flex:1;
+    min-width:0;
+    max-height:120px;
+    padding:14px;
+    border:none;
+    border-radius:15px;
+    background:#F1F5F9;
+    font-size:15px;
+    outline:none;
+    resize:none;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+.dark .input-area textarea{
+    background:#1F2937;
+    color:white;
+}
+
+@media(max-width:800px){
+    .chat-search{
+        margin-bottom:10px;
+    }
+
+    .input-area textarea{
+        padding:13px;
+        font-size:14px;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -1655,6 +1797,8 @@ body{
 
     <h3>Histórico</h3>
 
+    <input class="chat-search" id="buscaConversasMobile" placeholder="Buscar conversas..." oninput="filtrarConversas(this.value)">
+
     <br>
 
     <div id="listaChatsMobile"></div>
@@ -1694,6 +1838,8 @@ body{
             </button>
 
         </div>
+
+        <input class="chat-search" id="buscaConversas" placeholder="Buscar conversas..." oninput="filtrarConversas(this.value)">
 
         <button class="logout-btn" onclick="logout()">
             Sair da conta
@@ -1812,12 +1958,12 @@ body{
                 </svg>
             </button>
 
-            <input
-                type="text"
+            <textarea
                 id="mensagem"
                 placeholder="Digite sua mensagem..."
                 autocomplete="off"
-            >
+                rows="1"
+            ></textarea>
 
             <button onclick="enviarMensagem()">
                 Enviar
@@ -1828,6 +1974,8 @@ body{
     </div>
 
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 let usuarioAtual = "";
@@ -1841,6 +1989,110 @@ let audioTimer = null;
 let audioSeconds = 0;
 let audioBlobPendente = null;
 let audioPreviewUrl = null;
+let conversasCache = [];
+let filtroAtualConversas = "";
+
+
+function mostrarToast(texto){
+    let toast = document.getElementById("toast");
+    if(!toast){ return; }
+    toast.innerText = texto;
+    toast.classList.add("show");
+    clearTimeout(window.toastTimer);
+    window.toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2600);
+}
+
+function aplicarTemaAutomatico(){
+    let temaManual = localStorage.getItem("calmiTemaManual");
+    if(temaManual === "dark"){
+        document.body.classList.add("dark");
+        return;
+    }
+    if(temaManual === "light"){
+        document.body.classList.remove("dark");
+        return;
+    }
+    if(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches){
+        document.body.classList.add("dark");
+    }
+}
+
+function salvarTemaAtual(){
+    localStorage.setItem(
+        "calmiTemaManual",
+        document.body.classList.contains("dark") ? "dark" : "light"
+    );
+}
+
+function getConversasFixadas(){
+    try{
+        return JSON.parse(localStorage.getItem("calmiConversasFixadas") || "[]");
+    }catch(e){
+        return [];
+    }
+}
+
+function setConversasFixadas(lista){
+    localStorage.setItem("calmiConversasFixadas", JSON.stringify(lista));
+}
+
+function conversaEstaFixada(id){
+    return getConversasFixadas().includes(id);
+}
+
+function alternarFixarConversa(id, event){
+    if(event){ event.stopPropagation(); }
+    let lista = getConversasFixadas();
+    if(lista.includes(id)){
+        lista = lista.filter(item => item !== id);
+        mostrarToast("Conversa desafixada");
+    }else{
+        lista.push(id);
+        mostrarToast("Conversa fixada");
+    }
+    setConversasFixadas(lista);
+    renderizarListaConversas(conversasCache);
+}
+
+function filtrarConversas(valor){
+    filtroAtualConversas = (valor || "").toLowerCase();
+    let busca = document.getElementById("buscaConversas");
+    let buscaMobile = document.getElementById("buscaConversasMobile");
+    if(busca && busca.value !== valor){ busca.value = valor; }
+    if(buscaMobile && buscaMobile.value !== valor){ buscaMobile.value = valor; }
+    renderizarListaConversas(conversasCache);
+}
+
+function chaveFavorito(texto){
+    return "calmiFav_" + btoa(unescape(encodeURIComponent((texto || "").slice(0, 160))));
+}
+
+function adicionarBotaoFavorito(el, texto){
+    if(!el || el.querySelector(".favorite-btn")) return;
+    let chave = chaveFavorito(texto);
+    let ativo = localStorage.getItem(chave) === "1";
+    let botao = document.createElement("button");
+    botao.className = "favorite-btn" + (ativo ? " active" : "");
+    botao.innerHTML = ativo ? "⭐ Favorita" : "☆ Favoritar";
+    botao.onclick = () => {
+        let agoraAtivo = localStorage.getItem(chave) === "1";
+        if(agoraAtivo){
+            localStorage.removeItem(chave);
+            botao.classList.remove("active");
+            botao.innerHTML = "☆ Favoritar";
+            mostrarToast("Mensagem removida dos favoritos");
+        }else{
+            localStorage.setItem(chave, "1");
+            botao.classList.add("active");
+            botao.innerHTML = "⭐ Favorita";
+            mostrarToast("Mensagem favoritada");
+        }
+    };
+    el.appendChild(document.createElement("br"));
+    el.appendChild(botao);
+}
 
 function mudarTab(tipo){
 
@@ -2107,6 +2359,8 @@ function logout(){
 function toggleTema(){
 
     document.body.classList.toggle("dark");
+    salvarTemaAtual();
+    mostrarToast(document.body.classList.contains("dark") ? "Tema escuro ativado" : "Tema claro ativado");
 }
 
 function toggleMenuMobile(){
@@ -2152,13 +2406,17 @@ async function enviarMensagem(){
         </div>
     `;
 
+    adicionarBotaoFavorito(chat.lastElementChild, mensagem);
+
     input.value = "";
+    input.style.height = "auto";
 
     let botDiv = document.createElement("div");
 
     botDiv.className = "message bot";
 
     botDiv.innerHTML = `
+        <div style="font-size:13px;color:#64748B;margin-bottom:6px">Calmi está pensando...</div>
         <div class="typing">
             <div class="dot"></div>
             <div class="dot"></div>
@@ -2200,6 +2458,7 @@ async function enviarMensagem(){
 
             clearInterval(intervalo);
             adicionarBotaoVoz(botDiv, texto);
+            adicionarBotaoFavorito(botDiv, texto);
         }
 
     }, 12);
@@ -2235,6 +2494,7 @@ async function enviarImagem(inputArquivo){
     let botDiv = document.createElement("div");
     botDiv.className = "message bot";
     botDiv.innerHTML = `
+        <div style="font-size:13px;color:#64748B;margin-bottom:6px">Calmi está pensando...</div>
         <div class="typing">
             <div class="dot"></div>
             <div class="dot"></div>
@@ -2269,6 +2529,7 @@ async function enviarImagem(inputArquivo){
         if(i >= texto.length){
             clearInterval(intervalo);
             adicionarBotaoVoz(botDiv, texto);
+            adicionarBotaoFavorito(botDiv, texto);
         }
     }, 12);
 
@@ -2465,6 +2726,7 @@ async function enviarAudio(audioBlob, audioUrl){
     let botDiv = document.createElement("div");
     botDiv.className = "message bot";
     botDiv.innerHTML = `
+        <div style="font-size:13px;color:#64748B;margin-bottom:6px">Calmi está pensando...</div>
         <div class="typing">
             <div class="dot"></div>
             <div class="dot"></div>
@@ -2512,10 +2774,61 @@ async function enviarAudio(audioBlob, audioUrl){
         if(i >= texto.length){
             clearInterval(intervalo);
             adicionarBotaoVoz(botDiv, texto);
+            adicionarBotaoFavorito(botDiv, texto);
         }
     }, 12);
 
     carregarConversas();
+}
+
+function renderizarListaConversas(dados){
+
+    let lista = document.getElementById("listaChats");
+    let listaMobile = document.getElementById("listaChatsMobile");
+
+    if(lista){ lista.innerHTML = ""; }
+    if(listaMobile){ listaMobile.innerHTML = ""; }
+
+    let fixadas = getConversasFixadas();
+    let filtradas = (dados || []).filter(conversa => {
+        return !filtroAtualConversas || conversa.nome.toLowerCase().includes(filtroAtualConversas);
+    });
+
+    filtradas.sort((a,b) => {
+        let af = fixadas.includes(a.id) ? 1 : 0;
+        let bf = fixadas.includes(b.id) ? 1 : 0;
+        return bf - af;
+    });
+
+    filtradas.forEach(conversa => {
+        let fixa = fixadas.includes(conversa.id);
+        let nomeSeguro = conversa.nome;
+        let item = `
+            <div class="chat-item">
+                <div onclick="abrirConversa('${conversa.id}')">
+                    ${fixa ? "📌 " : ""}${nomeSeguro}
+                </div>
+
+                <button
+                    class="pin-btn ${fixa ? "fixed" : ""}"
+                    onclick="alternarFixarConversa('${conversa.id}', event)"
+                    title="Fixar conversa"
+                >
+                    📌
+                </button>
+
+                <button
+                    class="delete-btn"
+                    onclick="deletarConversa('${conversa.id}')"
+                >
+                    x
+                </button>
+            </div>
+        `;
+
+        if(lista){ lista.innerHTML += item; }
+        if(listaMobile){ listaMobile.innerHTML += item; }
+    });
 }
 
 function carregarConversas(){
@@ -2523,43 +2836,8 @@ function carregarConversas(){
     fetch("/conversas")
     .then(res => res.json())
     .then(dados => {
-
-        let lista = document.getElementById("listaChats");
-        let listaMobile = document.getElementById("listaChatsMobile");
-
-        if(lista){
-            lista.innerHTML = "";
-        }
-
-        if(listaMobile){
-            listaMobile.innerHTML = "";
-        }
-
-        dados.forEach(conversa => {
-
-            let item = `
-                <div class="chat-item">
-                    <div onclick="abrirConversa('${conversa.id}')">
-                        ${conversa.nome}
-                    </div>
-
-                    <button
-                        class="delete-btn"
-                        onclick="deletarConversa('${conversa.id}')"
-                    >
-                        x
-                    </button>
-                </div>
-            `;
-
-            if(lista){
-                lista.innerHTML += item;
-            }
-
-            if(listaMobile){
-                listaMobile.innerHTML += item;
-            }
-        });
+        conversasCache = dados || [];
+        renderizarListaConversas(conversasCache);
     });
 }
 
@@ -2576,6 +2854,8 @@ function renderizarMensagemSalva(msg){
     if(msg.tipo === "bot" && !div.querySelector(".speak-btn")){
         adicionarBotaoVoz(div, msg.texto);
     }
+
+    adicionarBotaoFavorito(div, msg.texto);
 }
 
 function abrirConversa(id){
@@ -2612,12 +2892,18 @@ function deletarConversa(id){
 }
 
 document.getElementById("mensagem")
-.addEventListener("keypress", function(e){
+.addEventListener("keydown", function(e){
 
-    if(e.key === "Enter"){
-
+    if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
         enviarMensagem();
     }
+});
+
+document.getElementById("mensagem")
+.addEventListener("input", function(){
+    this.style.height = "auto";
+    this.style.height = Math.min(this.scrollHeight, 120) + "px";
 });
 
 
@@ -2670,7 +2956,7 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
     pararAudioAtual();
 
     botaoAudioAtual = botao;
-    botao.innerHTML = "⏹ Parar de ouvir";
+    botao.innerHTML = "⏳ Carregando voz...";
     botao.classList.add("listening");
 
     try{
@@ -2694,9 +2980,10 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
 
         audioRespostaAtual.onerror = () => {
             pararAudioAtual();
-            alert("Não foi possível reproduzir o áudio agora.");
+            mostrarToast("Não foi possível reproduzir o áudio agora.");
         };
 
+        botao.innerHTML = `⏹ Parar de ouvir <span class="speak-waves"><span></span><span></span><span></span></span>`;
         await audioRespostaAtual.play();
 
     }catch(erro){
@@ -2705,7 +2992,7 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
         pararAudioAtual();
         resetarBotaoAudio(botao);
 
-        alert("A voz humanizada não carregou. Verifique a voz escolhida, os créditos ou a chave da ElevenLabs.");
+        mostrarToast("A voz humanizada não carregou. Verifique a voz da ElevenLabs.");
     }
 }
 
@@ -2746,7 +3033,7 @@ async function deletarNota(id){
 
 async function registrarHumor(humor){
     await fetch('/humor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({humor})});
-    alert('Humor registrado: '+humor);
+    mostrarToast('Humor registrado: '+humor);
 }
 
 function toggleDashboard(){
@@ -2768,8 +3055,12 @@ async function carregarDashboard(){
 }
 
 function exportarConversa(){
-    if(!conversaAtual){ alert('Abra uma conversa primeiro.'); return; }
-    window.open('/exportar/'+conversaAtual,'_blank');
+    if(!conversaAtual){ mostrarToast('Abra uma conversa primeiro.'); return; }
+    let escolhaPdf = confirm('Deseja exportar em PDF?
+
+OK = PDF
+Cancelar = TXT');
+    window.open((escolhaPdf ? '/exportar_pdf/' : '/exportar/') + conversaAtual,'_blank');
 }
 
 function modoRapido(tipo){
@@ -2780,6 +3071,7 @@ function modoRapido(tipo){
     enviarMensagem();
 }
 
+aplicarTemaAutomatico();
 verificarSessao();
 </script>
 
