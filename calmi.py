@@ -2613,6 +2613,9 @@ document.getElementById("mensagem")
 let audioRespostaAtual = null;
 let botaoAudioAtual = null;
 let audioUrlAtual = null;
+let ttsAbortController = null;
+let audioCarregando = false;
+let falaNavegadorAtual = null;
 
 function limparTextoParaAudio(texto){
     let div = document.createElement("div");
@@ -2624,10 +2627,18 @@ function resetarBotaoAudio(botao){
     if(botao){
         botao.innerHTML = "🔊 Ouvir resposta";
         botao.classList.remove("listening");
+        botao.disabled = false;
     }
 }
 
 function pararAudioAtual(){
+    if(ttsAbortController){
+        ttsAbortController.abort();
+        ttsAbortController = null;
+    }
+
+    audioCarregando = false;
+
     if(audioRespostaAtual){
         audioRespostaAtual.pause();
         audioRespostaAtual.currentTime = 0;
@@ -2639,34 +2650,42 @@ function pararAudioAtual(){
         audioUrlAtual = null;
     }
 
-    resetarBotaoAudio(botaoAudioAtual);
-    botaoAudioAtual = null;
-
     if("speechSynthesis" in window){
         speechSynthesis.cancel();
     }
+
+    falaNavegadorAtual = null;
+
+    resetarBotaoAudio(botaoAudioAtual);
+    botaoAudioAtual = null;
 }
 
 async function ouvirRespostaCodificada(textoCodificado, botao){
     let texto = decodeURIComponent(escape(atob(textoCodificado)));
     texto = limparTextoParaAudio(texto);
 
-    if(botaoAudioAtual === botao && audioRespostaAtual){
+    // Se clicar no mesmo botão enquanto está carregando ou tocando, para tudo.
+    if(botaoAudioAtual === botao && (audioCarregando || audioRespostaAtual || falaNavegadorAtual)){
         pararAudioAtual();
         return;
     }
 
+    // Se outro áudio estiver tocando, para antes de começar outro.
     pararAudioAtual();
 
     botaoAudioAtual = botao;
-    botao.innerHTML = "⏹ Parar de ouvir";
+    audioCarregando = true;
+    botao.innerHTML = "⏳ Carregando voz...";
     botao.classList.add("listening");
 
     try{
+        ttsAbortController = new AbortController();
+
         let resposta = await fetch("/tts", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({texto:texto})
+            body:JSON.stringify({texto:texto}),
+            signal:ttsAbortController.signal
         });
 
         if(!resposta.ok){
@@ -2674,6 +2693,15 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
         }
 
         let blob = await resposta.blob();
+
+        // Se o usuário clicou em parar enquanto baixava o áudio, não toca nada.
+        if(botaoAudioAtual !== botao){
+            return;
+        }
+
+        audioCarregando = false;
+        botao.innerHTML = "⏹ Parar de ouvir";
+
         audioUrlAtual = URL.createObjectURL(blob);
         audioRespostaAtual = new Audio(audioUrlAtual);
 
@@ -2689,22 +2717,31 @@ async function ouvirRespostaCodificada(textoCodificado, botao){
         await audioRespostaAtual.play();
 
     }catch(erro){
-        console.log(erro);
+        if(erro.name === "AbortError"){
+            pararAudioAtual();
+            return;
+        }
 
-        if("speechSynthesis" in window){
+        console.log(erro);
+        audioCarregando = false;
+
+        // Fallback: se ElevenLabs falhar, usa voz do navegador, mas mantendo o botão Parar.
+        if("speechSynthesis" in window && botaoAudioAtual === botao){
             let fala = new SpeechSynthesisUtterance(texto);
             fala.lang = "pt-BR";
             fala.rate = 0.95;
+            fala.pitch = 1;
+
+            falaNavegadorAtual = fala;
+            botao.innerHTML = "⏹ Parar de ouvir";
 
             fala.onend = () => {
-                resetarBotaoAudio(botao);
-                botaoAudioAtual = null;
+                pararAudioAtual();
             };
 
             speechSynthesis.speak(fala);
         }else{
-            resetarBotaoAudio(botao);
-            botaoAudioAtual = null;
+            pararAudioAtual();
             alert("Seu navegador não conseguiu tocar a resposta.");
         }
     }
