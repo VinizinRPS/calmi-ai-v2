@@ -76,6 +76,35 @@ def init_db():
     )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS notas_usuario (
+        id SERIAL PRIMARY KEY,
+        usuario TEXT NOT NULL,
+        titulo TEXT,
+        conteudo TEXT NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS humor_diario (
+        id SERIAL PRIMARY KEY,
+        usuario TEXT NOT NULL,
+        humor TEXT NOT NULL,
+        observacao TEXT,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS lembretes_usuario (
+        id SERIAL PRIMARY KEY,
+        usuario TEXT NOT NULL,
+        texto TEXT NOT NULL,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -312,6 +341,118 @@ def resumir_contexto(historico):
     )
 
 
+# ==========================================
+# NOTAS, HUMOR E DASHBOARD
+# ==========================================
+
+def buscar_notas(usuario, limite=10):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT id, titulo, conteudo, criado_em
+        FROM notas_usuario
+        WHERE usuario=%s
+        ORDER BY id DESC
+        LIMIT %s
+        """,
+        (usuario, limite)
+    )
+    dados = cur.fetchall()
+    cur.close()
+    conn.close()
+    return dados
+
+
+def resumir_notas(usuario):
+    notas = buscar_notas(usuario, 8)
+
+    if not notas:
+        return "Sem anotações importantes cadastradas."
+
+    resumo = []
+
+    for nota in notas:
+        titulo = nota["titulo"] or "Anotação"
+        conteudo = nota["conteudo"]
+        resumo.append(f"- {titulo}: {conteudo}")
+
+    return "\n".join(resumo)
+
+
+def salvar_humor(usuario, humor, observacao=""):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO humor_diario(usuario, humor, observacao)
+        VALUES (%s,%s,%s)
+        """,
+        (usuario, humor, observacao)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def buscar_dashboard(usuario):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT humor, observacao, criado_em
+        FROM humor_diario
+        WHERE usuario=%s
+        ORDER BY id DESC
+        LIMIT 7
+        """,
+        (usuario,)
+    )
+    humores = cur.fetchall()
+
+    cur.execute(
+        """
+        SELECT nivel_emocional, COUNT(*) AS total
+        FROM mensagens_memoria
+        WHERE usuario=%s AND remetente='user'
+        GROUP BY nivel_emocional
+        """,
+        (usuario,)
+    )
+    riscos = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return humores, riscos
+
+
+def sugestao_profissional_detalhada(texto, risco):
+    texto_lower = texto.lower()
+
+    if risco == "crítico":
+        if "ansiedade" in texto_lower or "pânico" in texto_lower or "medo" in texto_lower:
+            profissional = "psicólogo especializado em ansiedade/crise e apoio humano imediato"
+        elif "família" in texto_lower or "pai" in texto_lower or "mãe" in texto_lower:
+            profissional = "psicólogo familiar ou psicólogo clínico com experiência em crise emocional"
+        elif "luto" in texto_lower or "perdi" in texto_lower or "morreu" in texto_lower:
+            profissional = "psicólogo especializado em luto e apoio humano imediato"
+        else:
+            profissional = "psicólogo clínico especializado em crise emocional"
+
+        return (
+            f"Pode ser importante procurar {profissional}. "
+            "Se existir risco imediato, procure agora um responsável, alguém de confiança, "
+            "um serviço local de emergência ou o CVV 188."
+        )
+
+    if risco == "elevado":
+        return f"Pode ser útil conversar com {sugerir_profissional(texto, risco)}. Você merece apoio de verdade."
+
+    return f"Pode ser útil conversar com {sugerir_profissional(texto, risco)} se isso continuar pesando."
+
+
 HTML = """
 
 <!DOCTYPE html>
@@ -416,6 +557,62 @@ body{
 
 .avatar:hover{
     outline:2px solid rgba(96,165,250,.8);
+}
+
+.avatar.avatar-pop{
+    animation:avatarPop .45s ease;
+}
+
+@keyframes avatarPop{
+    0%{transform:scale(.88); opacity:.65;}
+    60%{transform:scale(1.08); opacity:1;}
+    100%{transform:scale(1);}
+}
+
+.profile-actions{
+    position:fixed;
+    background:#111827;
+    color:white;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:8px;
+    display:none;
+    flex-direction:column;
+    gap:6px;
+    z-index:3000;
+    box-shadow:0 18px 50px rgba(0,0,0,.35);
+    min-width:170px;
+}
+
+.profile-actions.open{
+    display:flex;
+}
+
+.profile-actions button{
+    border:none;
+    border-radius:12px;
+    padding:11px 12px;
+    cursor:pointer;
+    color:white;
+    font-weight:bold;
+    text-align:left;
+    background:#1F2937;
+}
+
+.profile-actions button:hover{
+    background:#374151;
+}
+
+.profile-actions .danger{
+    background:#7F1D1D;
+}
+
+.profile-actions .danger:hover{
+    background:#991B1B;
+}
+
+.mobile-profile{
+    display:none;
 }
 
 .status{
@@ -1058,6 +1255,35 @@ body{
         cursor:pointer;
     }
 
+    .mobile-profile{
+        display:flex;
+        align-items:center;
+        gap:12px;
+        padding:13px;
+        border-radius:18px;
+        background:rgba(31,41,55,.9);
+        margin-bottom:16px;
+    }
+
+    .mobile-profile .avatar{
+        width:62px;
+        height:62px;
+    }
+
+    .mobile-profile small{
+        color:#CBD5E1;
+        display:block;
+        margin-top:3px;
+    }
+
+    .profile-actions{
+        left:18px !important;
+        right:18px !important;
+        top:auto !important;
+        bottom:18px !important;
+        min-width:0;
+    }
+
     .mobile-new-chat{
         width:100%;
         padding:14px;
@@ -1155,6 +1381,141 @@ body{
         font-size:46px;
     }
 }
+
+
+.quick-panel{
+    margin-top:14px;
+    background:rgba(31,41,55,.88);
+    border-radius:18px;
+    padding:12px;
+}
+
+.quick-panel h4{
+    color:#DBEAFE;
+    margin-bottom:8px;
+    font-size:14px;
+}
+
+.mood-grid,.mode-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:7px;
+}
+
+.mood-grid button,.mode-grid button,.side-action{
+    border:none;
+    border-radius:12px;
+    padding:9px;
+    cursor:pointer;
+    background:#1F2937;
+    color:white;
+    font-weight:bold;
+}
+
+.mood-grid button:hover,.mode-grid button:hover,.side-action:hover{
+    background:#374151;
+}
+
+.side-action{
+    width:100%;
+    margin-top:8px;
+    background:linear-gradient(135deg,var(--roxo),var(--azul));
+}
+
+.notes-panel,.dashboard-panel{
+    display:none;
+    position:fixed;
+    right:24px;
+    top:90px;
+    width:380px;
+    max-width:calc(100vw - 30px);
+    max-height:78vh;
+    overflow:auto;
+    background:white;
+    color:#111827;
+    z-index:1200;
+    border-radius:24px;
+    box-shadow:0 30px 90px rgba(0,0,0,.35);
+    padding:18px;
+}
+
+.notes-panel.open,.dashboard-panel.open{
+    display:block;
+}
+
+.panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+}
+
+.panel-head button{
+    border:none;
+    background:#EF4444;
+    color:white;
+    border-radius:50%;
+    width:30px;
+    height:30px;
+    cursor:pointer;
+}
+
+.notes-panel input,.notes-panel textarea,.notes-panel select{
+    width:100%;
+    margin-top:8px;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    background:#F1F5F9;
+    outline:none;
+}
+
+.notes-panel textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+.note-card,.dash-card{
+    background:#F8FAFC;
+    border-radius:16px;
+    padding:12px;
+    margin-top:10px;
+    border:1px solid #E5E7EB;
+}
+
+.note-card button{
+    margin-top:8px;
+    border:none;
+    background:#EF4444;
+    color:white;
+    padding:7px 10px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.speak-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    border:none;
+    margin-top:10px;
+    padding:7px 10px;
+    border-radius:10px;
+    background:#E0F2FE;
+    color:#075985;
+    cursor:pointer;
+}
+
+@media(max-width:800px){
+    .notes-panel,.dashboard-panel{
+        left:10px;
+        right:10px;
+        top:75px;
+        width:auto;
+        max-height:72vh;
+    }
+}
+
 </style>
 </head>
 <body>
@@ -1221,6 +1582,33 @@ body{
     onchange="alterarFotoPerfil(this)"
 >
 
+<div class="profile-actions" id="profileActions">
+    <button onclick="selecionarNovaFoto()">📷 Trocar foto</button>
+    <button class="danger" onclick="removerFotoPerfil()">🗑️ Remover foto</button>
+</div>
+
+
+
+<div class="notes-panel" id="notesPanel">
+    <div class="panel-head">
+        <h3>📝 Anotações importantes</h3>
+        <button onclick="toggleNotas()">×</button>
+    </div>
+    <p style="font-size:13px;color:#64748B">A IA usa essas anotações para entender melhor seu contexto.</p>
+    <input id="notaTitulo" placeholder="Título da anotação">
+    <textarea id="notaConteudo" placeholder="Ex: Tenho prova sexta, estou preocupado com meu pai, quero melhorar minha ansiedade..."></textarea>
+    <button class="side-action" onclick="salvarNota()">Salvar anotação</button>
+    <div id="listaNotas"></div>
+</div>
+
+<div class="dashboard-panel" id="dashboardPanel">
+    <div class="panel-head">
+        <h3>📊 Meu emocional</h3>
+        <button onclick="toggleDashboard()">×</button>
+    </div>
+    <div id="dashboardConteudo">Carregando...</div>
+</div>
+
 <div class="mobile-menu" id="mobileMenu">
 
     <div class="mobile-menu-header">
@@ -1229,6 +1617,15 @@ body{
 
         <button onclick="toggleMenuMobile()">✕</button>
 
+    </div>
+
+    <div class="mobile-profile">
+        <div class="avatar" id="avatarMobile" title="Foto de perfil" onclick="abrirMenuFoto(event)">C</div>
+        <div>
+            <h3 id="nomeUsuarioMobile">Usuário</h3>
+            <small>Toque na foto para alterar</small>
+            <div class="status">● Online</div>
+        </div>
     </div>
 
     <button
@@ -1241,6 +1638,12 @@ body{
     <button class="logout-btn" onclick="logout()">
         Sair da conta
     </button>
+
+    <button class="side-action" onclick="toggleNotas(); toggleMenuMobile();">📝 Anotações</button>
+    <button class="side-action" onclick="toggleDashboard(); toggleMenuMobile();">📊 Dashboard</button>
+    <button class="side-action" onclick="exportarConversa(); toggleMenuMobile();">📄 Exportar conversa</button>
+    <button class="side-action" onclick="modoRapido('respiração'); toggleMenuMobile();">🧘 Respirar</button>
+    <button class="side-action" onclick="modoRapido('sono'); toggleMenuMobile();">🌙 Dormir melhor</button>
 
     <br>
 
@@ -1266,7 +1669,7 @@ body{
 
         <div class="profile">
 
-            <div class="avatar" id="avatar" title="Alterar foto de perfil" onclick="document.getElementById('fotoPerfilInput').click()">C</div>
+            <div class="avatar" id="avatar" title="Foto de perfil" onclick="abrirMenuFoto(event)">C</div>
 
             <div>
 
@@ -1289,6 +1692,26 @@ body{
         <button class="logout-btn" onclick="logout()">
             Sair da conta
         </button>
+
+        <div class="quick-panel">
+            <h4>Como você está hoje?</h4>
+            <div class="mood-grid">
+                <button onclick="registrarHumor('😊 Muito bem')">😊</button>
+                <button onclick="registrarHumor('🙂 Bem')">🙂</button>
+                <button onclick="registrarHumor('😐 Neutro')">😐</button>
+                <button onclick="registrarHumor('😔 Mal')">😔</button>
+                <button onclick="registrarHumor('😢 Muito mal')">😢</button>
+                <button onclick="toggleDashboard()">📊</button>
+            </div>
+        </div>
+
+        <div class="quick-panel">
+            <h4>Ferramentas</h4>
+            <button class="side-action" onclick="toggleNotas()">📝 Anotações</button>
+            <button class="side-action" onclick="exportarConversa()">📄 Exportar conversa</button>
+            <button class="side-action" onclick="modoRapido('respiração')">🧘 Respirar</button>
+            <button class="side-action" onclick="modoRapido('sono')">🌙 Dormir melhor</button>
+        </div>
 
         <div class="chats" id="listaChats"></div>
 
@@ -1490,6 +1913,11 @@ function iniciarApp(usuario){
 
     document.getElementById("nomeUsuario").innerText = usuario;
 
+    let nomeMobile = document.getElementById("nomeUsuarioMobile");
+    if(nomeMobile){
+        nomeMobile.innerText = usuario;
+    }
+
     atualizarAvatarInicial(usuario);
 
     carregarFotoPerfil();
@@ -1499,22 +1927,103 @@ function iniciarApp(usuario){
     carregarConversas();
 }
 
+function animarAvatar(el){
+    if(!el) return;
+    el.classList.remove("avatar-pop");
+    void el.offsetWidth;
+    el.classList.add("avatar-pop");
+}
+
 function atualizarAvatarInicial(usuario){
 
+    let letra = (usuario || "C")[0].toUpperCase();
     let avatar = document.getElementById("avatar");
-    avatar.innerHTML = usuario[0].toUpperCase();
+    let avatarMobile = document.getElementById("avatarMobile");
+
+    if(avatar){
+        avatar.innerHTML = letra;
+        animarAvatar(avatar);
+    }
+
+    if(avatarMobile){
+        avatarMobile.innerHTML = letra;
+        animarAvatar(avatarMobile);
+    }
 }
 
 function aplicarFotoPerfil(foto){
 
     let avatar = document.getElementById("avatar");
+    let avatarMobile = document.getElementById("avatarMobile");
 
     if(foto){
-        avatar.innerHTML = `<img src="${foto}" alt="Foto de perfil">`;
+        if(avatar){
+            avatar.innerHTML = `<img src="${foto}" alt="Foto de perfil">`;
+            animarAvatar(avatar);
+        }
+
+        if(avatarMobile){
+            avatarMobile.innerHTML = `<img src="${foto}" alt="Foto de perfil">`;
+            animarAvatar(avatarMobile);
+        }
     }else{
         atualizarAvatarInicial(usuarioAtual || "C");
     }
 }
+
+function abrirMenuFoto(event){
+    event.stopPropagation();
+
+    let menu = document.getElementById("profileActions");
+
+    if(!menu){
+        return;
+    }
+
+    let rect = event.currentTarget.getBoundingClientRect();
+
+    menu.style.left = Math.min(rect.left, window.innerWidth - 190) + "px";
+    menu.style.top = (rect.bottom + 8) + "px";
+
+    menu.classList.toggle("open");
+}
+
+function fecharMenuFoto(){
+    let menu = document.getElementById("profileActions");
+
+    if(menu){
+        menu.classList.remove("open");
+    }
+}
+
+function selecionarNovaFoto(){
+    fecharMenuFoto();
+    document.getElementById("fotoPerfilInput").click();
+}
+
+async function removerFotoPerfil(){
+    fecharMenuFoto();
+
+    let resposta = await fetch("/perfil/remover",{
+        method:"POST"
+    });
+
+    let dados = await resposta.json();
+
+    if(dados.status === "ok"){
+        aplicarFotoPerfil(null);
+    }else{
+        alert(dados.erro || "Não consegui remover a foto.");
+    }
+}
+
+document.addEventListener("click", function(e){
+    let menu = document.getElementById("profileActions");
+
+    if(menu && !menu.contains(e.target)){
+        menu.classList.remove("open");
+    }
+});
 
 async function carregarFotoPerfil(){
 
@@ -1523,6 +2032,8 @@ async function carregarFotoPerfil(){
 
     if(dados.foto_perfil){
         aplicarFotoPerfil(dados.foto_perfil);
+    }else{
+        aplicarFotoPerfil(null);
     }
 }
 
@@ -1682,6 +2193,7 @@ async function enviarMensagem(){
         if(i >= texto.length){
 
             clearInterval(intervalo);
+            adicionarBotaoVoz(botDiv, texto);
         }
 
     }, 12);
@@ -1750,6 +2262,7 @@ async function enviarImagem(inputArquivo){
 
         if(i >= texto.length){
             clearInterval(intervalo);
+            adicionarBotaoVoz(botDiv, texto);
         }
     }, 12);
 
@@ -1992,6 +2505,7 @@ async function enviarAudio(audioBlob, audioUrl){
 
         if(i >= texto.length){
             clearInterval(intervalo);
+            adicionarBotaoVoz(botDiv, texto);
         }
     }, 12);
 
@@ -2089,6 +2603,95 @@ document.getElementById("mensagem")
         enviarMensagem();
     }
 });
+
+
+function falarTexto(texto){
+    if(!('speechSynthesis' in window)){
+        alert('Seu navegador não suporta leitura em voz alta.');
+        return;
+    }
+    speechSynthesis.cancel();
+    let fala = new SpeechSynthesisUtterance(texto.replace(/<br>/g,' ').replace(/<[^>]*>/g,''));
+    fala.lang = 'pt-BR';
+    fala.rate = 1;
+    speechSynthesis.speak(fala);
+}
+
+function falarTextoCodificado(textoCodificado){
+    let texto = decodeURIComponent(escape(atob(textoCodificado)));
+    falarTexto(texto);
+}
+
+function adicionarBotaoVoz(el, texto){
+    let safe = btoa(unescape(encodeURIComponent(texto)));
+    el.innerHTML += `<br><button class="speak-btn" onclick="falarTextoCodificado('${safe}')">🔊 Ouvir resposta</button>`;
+}
+
+function toggleNotas(){
+    document.getElementById('notesPanel').classList.toggle('open');
+    carregarNotas();
+}
+
+async function carregarNotas(){
+    let res = await fetch('/notas');
+    let dados = await res.json();
+    let lista = document.getElementById('listaNotas');
+    lista.innerHTML = '';
+    dados.forEach(n => {
+        lista.innerHTML += `<div class="note-card"><strong>${n.titulo || 'Anotação'}</strong><br>${n.conteudo}<br><button onclick="deletarNota(${n.id})">Excluir</button></div>`;
+    });
+}
+
+async function salvarNota(){
+    let titulo = document.getElementById('notaTitulo').value;
+    let conteudo = document.getElementById('notaConteudo').value;
+    if(!conteudo.trim()){ alert('Escreva uma anotação.'); return; }
+    await fetch('/notas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titulo,conteudo})});
+    document.getElementById('notaTitulo').value='';
+    document.getElementById('notaConteudo').value='';
+    carregarNotas();
+}
+
+async function deletarNota(id){
+    await fetch('/notas/'+id,{method:'DELETE'});
+    carregarNotas();
+}
+
+async function registrarHumor(humor){
+    await fetch('/humor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({humor})});
+    alert('Humor registrado: '+humor);
+}
+
+function toggleDashboard(){
+    document.getElementById('dashboardPanel').classList.toggle('open');
+    carregarDashboard();
+}
+
+async function carregarDashboard(){
+    let res = await fetch('/dashboard');
+    let d = await res.json();
+    let html = '<div class="dash-card"><strong>Últimos humores</strong><br>';
+    if(!d.humores.length){ html += 'Nenhum humor registrado ainda.'; }
+    d.humores.forEach(h => html += `${h.humor} <small>${h.data}</small><br>`);
+    html += '</div><div class="dash-card"><strong>Níveis emocionais</strong><br>';
+    if(!d.riscos.length){ html += 'Sem dados suficientes.'; }
+    d.riscos.forEach(r => html += `${r.nivel}: ${r.total}<br>`);
+    html += '</div>';
+    document.getElementById('dashboardConteudo').innerHTML = html;
+}
+
+function exportarConversa(){
+    if(!conversaAtual){ alert('Abra uma conversa primeiro.'); return; }
+    window.open('/exportar/'+conversaAtual,'_blank');
+}
+
+function modoRapido(tipo){
+    let msg = tipo === 'respiração'
+        ? 'Calmi, me guie em um exercício de respiração curto e calmo.'
+        : 'Calmi, me ajude a relaxar para dormir melhor hoje.';
+    document.getElementById('mensagem').value = msg;
+    enviarMensagem();
+}
 
 verificarSessao();
 </script>
@@ -2265,6 +2868,29 @@ def perfil():
     return jsonify({"status":"ok"})
 
 
+@app.route("/perfil/remover", methods=["POST"])
+def remover_perfil():
+
+    if "usuario" not in session:
+        return jsonify({"status":"erro", "erro":"Você precisa estar logado."})
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "UPDATE usuarios SET foto_perfil=NULL WHERE usuario=%s",
+        (usuario,)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"status":"ok"})
+
+
 @app.route("/logout")
 def logout():
 
@@ -2311,6 +2937,7 @@ def chat():
         )
 
         contexto = resumir_contexto(historico)
+        notas_contexto = resumir_notas(usuario)
 
         conn = get_db()
         cur = conn.cursor()
@@ -2360,8 +2987,8 @@ def chat():
             resposta_texto = (
                 "💙 Eu percebo que você pode estar passando por algo muito pesado. "
                 "Você não precisa enfrentar isso sozinho. "
-                "Procure agora alguém de confiança, um responsável ou ajuda profissional. "
-                "No Brasil, o CVV atende pelo 188."
+                + sugestao_profissional_detalhada(mensagem, risco) + " "
+                "No Brasil, o CVV atende pelo 188, e também é importante falar com um responsável, alguém de confiança ou emergência local se houver risco imediato."
             )
 
         else:
@@ -2377,6 +3004,9 @@ Nível emocional detectado:
 
 Sugestão de apoio:
 {profissional}
+
+Anotações importantes do usuário:
+{notas_contexto}
 
 Regras:
 - Seja acolhedor.
@@ -2492,6 +3122,7 @@ def analisar_imagem():
 
         historico = buscar_historico(usuario)
         contexto = resumir_contexto(historico)
+        notas_contexto = resumir_notas(usuario)
 
         conn = get_db()
         cur = conn.cursor()
@@ -2655,6 +3286,7 @@ def analisar_audio():
         risco = analisar_risco_emocional(texto_audio, historico)
         profissional = sugerir_profissional(texto_audio, risco)
         contexto = resumir_contexto(historico)
+        notas_contexto = resumir_notas(usuario)
 
         conn = get_db()
         cur = conn.cursor()
@@ -2706,6 +3338,9 @@ Nível emocional detectado:
 
 Sugestão de apoio:
 {profissional}
+
+Anotações importantes do usuário:
+{notas_contexto}
 
 Regras:
 - Responda como se tivesse ouvido o áudio do usuário.
@@ -2887,6 +3522,123 @@ def deletar(id):
     return jsonify({
         "status": "ok"
     })
+
+
+@app.route("/notas", methods=["GET", "POST"])
+def notas():
+    if "usuario" not in session:
+        return jsonify([] if request.method == "GET" else {"status":"erro"})
+
+    usuario = session["usuario"]
+
+    if request.method == "GET":
+        notas = buscar_notas(usuario, 30)
+        return jsonify([
+            {
+                "id": n["id"],
+                "titulo": n["titulo"],
+                "conteudo": n["conteudo"]
+            }
+            for n in notas
+        ])
+
+    dados = request.get_json()
+    titulo = dados.get("titulo", "").strip()
+    conteudo = dados.get("conteudo", "").strip()
+
+    if not conteudo:
+        return jsonify({"status":"erro", "erro":"Anotação vazia."})
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO notas_usuario(usuario, titulo, conteudo) VALUES (%s,%s,%s)",
+        (usuario, titulo, conteudo)
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status":"ok"})
+
+
+@app.route("/notas/<int:nota_id>", methods=["DELETE"])
+def deletar_nota(nota_id):
+    if "usuario" not in session:
+        return jsonify({"status":"erro"})
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM notas_usuario WHERE id=%s AND usuario=%s",
+        (nota_id, session["usuario"])
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"status":"ok"})
+
+
+@app.route("/humor", methods=["POST"])
+def humor():
+    if "usuario" not in session:
+        return jsonify({"status":"erro"})
+
+    dados = request.get_json()
+    salvar_humor(session["usuario"], dados.get("humor", "😐 Neutro"), dados.get("observacao", ""))
+    return jsonify({"status":"ok"})
+
+
+@app.route("/dashboard")
+def dashboard():
+    if "usuario" not in session:
+        return jsonify({"humores": [], "riscos": []})
+
+    humores, riscos = buscar_dashboard(session["usuario"])
+    return jsonify({
+        "humores": [
+            {"humor": h["humor"], "observacao": h["observacao"], "data": str(h["criado_em"])[:16]}
+            for h in humores
+        ],
+        "riscos": [
+            {"nivel": r["nivel_emocional"], "total": r["total"]}
+            for r in riscos
+        ]
+    })
+
+
+@app.route("/exportar/<id>")
+def exportar(id):
+    if "usuario" not in session:
+        return "Você precisa estar logado.", 401
+
+    usuario = session["usuario"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM conversas WHERE id=%s AND usuario=%s", (id, usuario))
+    conversa = cur.fetchone()
+
+    if not conversa:
+        cur.close()
+        conn.close()
+        return "Conversa não encontrada.", 404
+
+    cur.execute("SELECT tipo, texto FROM mensagens WHERE conversa_id=%s ORDER BY id ASC", (id,))
+    mensagens = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    linhas = [f"Calmi AI - Exportação da conversa: {conversa['nome']}", ""]
+
+    for m in mensagens:
+        remetente = "Você" if m["tipo"] == "user" else "Calmi"
+        texto = m["texto"].replace("<br>", "\n")
+        linhas.append(f"{remetente}: {texto}")
+        linhas.append("")
+
+    return "\n".join(linhas), 200, {
+        "Content-Type":"text/plain; charset=utf-8",
+        "Content-Disposition":"attachment; filename=conversa_calmi.txt"
+    }
 
 
 if __name__ == "__main__":
