@@ -773,6 +773,137 @@ body{
     pointer-events:none;
 }
 
+
+.audio-recorder{
+    display:none;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    background:rgba(255,255,255,.96);
+    border-top:1px solid rgba(0,0,0,.06);
+    box-shadow:0 -8px 22px rgba(0,0,0,.06);
+}
+
+.audio-recorder.show{
+    display:flex;
+}
+
+.rec-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-weight:bold;
+    color:#111827;
+    min-width:92px;
+}
+
+.rec-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:#EF4444;
+    animation:recPulse 1s infinite;
+}
+
+@keyframes recPulse{
+    0%{opacity:.35; transform:scale(.9)}
+    50%{opacity:1; transform:scale(1.15)}
+    100%{opacity:.35; transform:scale(.9)}
+}
+
+.wave-bars{
+    flex:1;
+    height:34px;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    padding:0 6px;
+    border-radius:18px;
+    background:#F1F5F9;
+    overflow:hidden;
+}
+
+.wave-bars span{
+    display:block;
+    width:4px;
+    height:10px;
+    border-radius:10px;
+    background:linear-gradient(180deg,var(--roxo),var(--azul));
+    animation:waveMove .8s infinite ease-in-out;
+}
+
+.wave-bars span:nth-child(2){animation-delay:.08s}
+.wave-bars span:nth-child(3){animation-delay:.16s}
+.wave-bars span:nth-child(4){animation-delay:.24s}
+.wave-bars span:nth-child(5){animation-delay:.32s}
+.wave-bars span:nth-child(6){animation-delay:.4s}
+.wave-bars span:nth-child(7){animation-delay:.48s}
+.wave-bars span:nth-child(8){animation-delay:.56s}
+.wave-bars span:nth-child(9){animation-delay:.64s}
+.wave-bars span:nth-child(10){animation-delay:.72s}
+
+@keyframes waveMove{
+    0%,100%{height:8px}
+    50%{height:28px}
+}
+
+.rec-action{
+    border:none;
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-weight:bold;
+    flex-shrink:0;
+}
+
+.stop-rec{
+    background:#EF4444;
+}
+
+.cancel-rec{
+    background:#64748B;
+}
+
+.send-rec{
+    background:linear-gradient(135deg,var(--azul),var(--roxo));
+}
+
+.audio-preview{
+    display:flex;
+    flex:1;
+    align-items:center;
+    gap:10px;
+}
+
+.audio-preview audio{
+    width:100%;
+    max-height:40px;
+}
+
+.chat-audio{
+    width:260px;
+    max-width:100%;
+    margin-top:8px;
+}
+
+.dark .audio-recorder{
+    background:#111827;
+    border-top:1px solid rgba(255,255,255,.08);
+}
+
+.dark .rec-status{
+    color:white;
+}
+
+.dark .wave-bars{
+    background:#1F2937;
+}
+
 @media(max-width:800px){
     body{
         overflow:hidden;
@@ -912,6 +1043,32 @@ body{
         height:46px;
         padding:0 !important;
         border-radius:15px;
+    }
+
+
+    .audio-recorder{
+        position:fixed;
+        left:0;
+        right:0;
+        bottom:68px;
+        z-index:61;
+        padding:10px;
+        gap:8px;
+    }
+
+    .rec-status{
+        min-width:76px;
+        font-size:13px;
+    }
+
+    .wave-bars{
+        height:32px;
+    }
+
+    .rec-action{
+        width:38px;
+        height:38px;
+        border-radius:12px;
     }
 
     .login-box{
@@ -1102,6 +1259,27 @@ body{
 
         </div>
 
+
+        <div class="audio-recorder" id="audioRecorder">
+            <div class="rec-status" id="recStatus">
+                <span class="rec-dot"></span>
+                <span id="recTimer">00:00</span>
+            </div>
+
+            <div class="wave-bars" id="waveBars">
+                <span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+
+            <div class="audio-preview" id="audioPreview" style="display:none">
+                <audio id="audioPreviewPlayer" controls></audio>
+            </div>
+
+            <button class="rec-action stop-rec" id="stopAudioBtn" type="button" onclick="pararGravacaoAudio()" title="Parar gravação">■</button>
+            <button class="rec-action cancel-rec" id="cancelAudioBtn" type="button" onclick="cancelarAudio()" title="Cancelar">×</button>
+            <button class="rec-action send-rec" id="sendAudioBtn" type="button" onclick="enviarAudioPendente()" title="Enviar áudio" style="display:none">➤</button>
+        </div>
+
         <div class="input-area">
 
             <button class="attach-btn" type="button" title="Enviar imagem" aria-label="Enviar imagem" onclick="document.getElementById('imagemInput').click()">
@@ -1154,6 +1332,11 @@ let modo = "login";
 let mediaRecorder = null;
 let audioChunks = [];
 let gravandoAudio = false;
+let audioStream = null;
+let audioTimer = null;
+let audioSeconds = 0;
+let audioBlobPendente = null;
+let audioPreviewUrl = null;
 
 function mudarTab(tipo){
 
@@ -1499,55 +1682,165 @@ async function enviarImagem(inputArquivo){
     carregarConversas();
 }
 
+function formatarTempo(segundos){
+    let min = String(Math.floor(segundos / 60)).padStart(2,"0");
+    let sec = String(segundos % 60).padStart(2,"0");
+    return `${min}:${sec}`;
+}
+
+function mostrarPainelGravacao(){
+    document.getElementById("audioRecorder").classList.add("show");
+    document.getElementById("recStatus").style.display = "flex";
+    document.getElementById("waveBars").style.display = "flex";
+    document.getElementById("stopAudioBtn").style.display = "flex";
+    document.getElementById("cancelAudioBtn").style.display = "flex";
+    document.getElementById("sendAudioBtn").style.display = "none";
+    document.getElementById("audioPreview").style.display = "none";
+    document.getElementById("recTimer").innerText = "00:00";
+}
+
+function mostrarPreviewAudio(){
+    document.getElementById("audioRecorder").classList.add("show");
+    document.getElementById("recStatus").style.display = "none";
+    document.getElementById("waveBars").style.display = "none";
+    document.getElementById("stopAudioBtn").style.display = "none";
+    document.getElementById("sendAudioBtn").style.display = "flex";
+    document.getElementById("cancelAudioBtn").style.display = "flex";
+    document.getElementById("audioPreview").style.display = "flex";
+}
+
+function esconderPainelAudio(){
+    document.getElementById("audioRecorder").classList.remove("show");
+}
+
+function iniciarTimerAudio(){
+    audioSeconds = 0;
+    document.getElementById("recTimer").innerText = "00:00";
+
+    if(audioTimer){
+        clearInterval(audioTimer);
+    }
+
+    audioTimer = setInterval(() => {
+        audioSeconds++;
+        document.getElementById("recTimer").innerText = formatarTempo(audioSeconds);
+    }, 1000);
+}
+
+function pararTimerAudio(){
+    if(audioTimer){
+        clearInterval(audioTimer);
+        audioTimer = null;
+    }
+}
+
 async function alternarGravacaoAudio(){
+    if(gravandoAudio){
+        pararGravacaoAudio();
+        return;
+    }
 
     let botao = document.getElementById("audioBtn");
 
-    if(!gravandoAudio){
+    try{
+        audioStream = await navigator.mediaDevices.getUserMedia({audio:true});
 
-        try{
-            let stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        audioChunks = [];
+        audioBlobPendente = null;
 
-            audioChunks = [];
-            mediaRecorder = new MediaRecorder(stream);
-
-            mediaRecorder.ondataavailable = function(event){
-                if(event.data.size > 0){
-                    audioChunks.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = async function(){
-
-                stream.getTracks().forEach(track => track.stop());
-
-                let audioBlob = new Blob(audioChunks, {type:"audio/webm"});
-
-                await enviarAudio(audioBlob);
-            };
-
-            mediaRecorder.start();
-            gravandoAudio = true;
-            botao.classList.add("recording");
-            botao.title = "Parar gravação";
-
-        }catch(erro){
-            alert("Não consegui acessar o microfone. Verifique a permissão do navegador.");
+        if(audioPreviewUrl){
+            URL.revokeObjectURL(audioPreviewUrl);
+            audioPreviewUrl = null;
         }
 
-    }else{
+        mediaRecorder = new MediaRecorder(audioStream);
 
+        mediaRecorder.ondataavailable = function(event){
+            if(event.data.size > 0){
+                audioChunks.push(event.data);
+            }
+        };
+
+        mediaRecorder.onstop = function(){
+            if(audioStream){
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+
+            pararTimerAudio();
+
+            audioBlobPendente = new Blob(audioChunks, {type:"audio/webm"});
+            audioPreviewUrl = URL.createObjectURL(audioBlobPendente);
+
+            document.getElementById("audioPreviewPlayer").src = audioPreviewUrl;
+            mostrarPreviewAudio();
+        };
+
+        mediaRecorder.start();
+        gravandoAudio = true;
+        botao.classList.add("recording");
+        botao.title = "Parar gravação";
+        mostrarPainelGravacao();
+        iniciarTimerAudio();
+
+    }catch(erro){
+        alert("Não consegui acessar o microfone. Verifique a permissão do navegador.");
+    }
+}
+
+function pararGravacaoAudio(){
+    gravandoAudio = false;
+
+    let botao = document.getElementById("audioBtn");
+    botao.classList.remove("recording");
+    botao.title = "Gravar áudio";
+
+    if(mediaRecorder && mediaRecorder.state !== "inactive"){
+        mediaRecorder.stop();
+    }
+}
+
+function cancelarAudio(){
+    if(gravandoAudio){
         gravandoAudio = false;
-        botao.classList.remove("recording");
-        botao.title = "Gravar áudio";
 
         if(mediaRecorder && mediaRecorder.state !== "inactive"){
             mediaRecorder.stop();
         }
     }
+
+    pararTimerAudio();
+
+    if(audioStream){
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+    }
+
+    audioChunks = [];
+    audioBlobPendente = null;
+
+    if(audioPreviewUrl){
+        URL.revokeObjectURL(audioPreviewUrl);
+        audioPreviewUrl = null;
+    }
+
+    document.getElementById("audioBtn").classList.remove("recording");
+    esconderPainelAudio();
 }
 
-async function enviarAudio(audioBlob){
+async function enviarAudioPendente(){
+    if(!audioBlobPendente){
+        return;
+    }
+
+    await enviarAudio(audioBlobPendente, audioPreviewUrl);
+
+    audioBlobPendente = null;
+    audioChunks = [];
+    esconderPainelAudio();
+}
+
+async function enviarAudio(audioBlob, audioUrl){
 
     if(audioBlob.size > 8 * 1024 * 1024){
         alert("O áudio ficou muito grande. Grave um áudio menor.");
@@ -1559,6 +1852,7 @@ async function enviarAudio(audioBlob){
     chat.innerHTML += `
         <div class="message user">
             Áudio enviado 🎙️
+            <audio class="chat-audio" controls src="${audioUrl}"></audio>
         </div>
     `;
 
