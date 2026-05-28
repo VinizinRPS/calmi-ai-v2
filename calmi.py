@@ -236,32 +236,78 @@ def sugerir_profissional(texto, risco):
     return "Psicólogo clínico"
 
 
+```python
 def resumir_contexto(historico):
+
     if not historico:
         return "Sem histórico emocional anterior."
 
     textos = [
+
         h["conteudo"].lower()
+
         for h in historico
+
         if h["remetente"] == "user"
+
     ]
 
     resumo = ""
 
-    if any("cansado" in texto for texto in textos):
-        resumo += "O usuário mencionou cansaço emocional. "
+    if any(
+        "cansado" in texto
+        for texto in textos
+    ):
 
-    if any("sozinho" in texto for texto in textos):
-        resumo += "O usuário mencionou solidão ou isolamento. "
+        resumo += (
+            "O usuário mencionou "
+            "cansaço emocional. "
+        )
 
-    if any("ansioso" in texto or "ansiedade" in texto for texto in textos):
-        resumo += "O usuário mencionou ansiedade ou preocupação. "
+    if any(
+        "sozinho" in texto
+        for texto in textos
+    ):
 
-    if any("não consigo dormir" in texto or "insônia" in texto for texto in textos):
-        resumo += "O usuário mencionou dificuldade para dormir. "
+        resumo += (
+            "O usuário mencionou "
+            "solidão ou isolamento. "
+        )
 
-    return resumo if resumo else "Histórico sem padrão emocional forte."
-    HTML = """
+    if any(
+        "ansioso" in texto
+        or "ansiedade" in texto
+
+        for texto in textos
+    ):
+
+        resumo += (
+            "O usuário mencionou "
+            "ansiedade ou preocupação. "
+        )
+
+    if any(
+        "não consigo dormir" in texto
+        or "insônia" in texto
+
+        for texto in textos
+    ):
+
+        resumo += (
+            "O usuário mencionou "
+            "dificuldade para dormir. "
+        )
+
+    return (
+        resumo
+        if resumo
+        else "Histórico sem padrão emocional forte."
+    )
+
+
+HTML = """
+```
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
