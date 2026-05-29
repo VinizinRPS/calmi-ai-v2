@@ -1880,11 +1880,28 @@ body:not(.dark) .chat-search{
     <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
-        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
+        <!-- olho esquerdo -->
+<path d="M34 40 C37 35 44 35 47 40"
+fill="none"
+stroke="white"
+stroke-width="6"
+stroke-linecap="round"/>
+
+<!-- olho direito -->
+<path d="M58 40 C61 35 68 35 71 40"
+fill="none"
+stroke="white"
+stroke-width="6"
+stroke-linecap="round"/>
+
+<!-- sorriso centralizado -->
+<path d="M45 55 C51 61 59 61 65 55"
+fill="none"
+stroke="white"
+stroke-width="6"
+stroke-linecap="round"/>
     </svg>
-</div>
+</div>  
 
             <div>
                 <h1>Calmi</h1>
