@@ -2056,6 +2056,7 @@ body:not(.dark) .chat-search{
             <button onclick="registrarHumor('😟 Ansioso')">😟 Ansioso</button>
             <button onclick="registrarHumor('😢 Muito mal')">😢 Muito mal</button>
             <button onclick="toggleDashboard(); toggleMenuMobile();">📊 Dashboard Emocional</button>
+            <button onclick="removerHumor(); toggleMenuMobile();">🗑️ Remover emoção</button>
         </div>
     </div>
 
@@ -2161,6 +2162,9 @@ body:not(.dark) .chat-search{
 
             <button class="side-action dashboard-action" onclick="toggleDashboard()">
                 📊 Dashboard Emocional
+            </button>
+            <button class="side-action" onclick="removerHumor()">
+                🗑️ Remover emoção
             </button>
         </div>
 
@@ -3415,6 +3419,37 @@ async function deletarNota(id){
 async function registrarHumor(humor){
     await fetch('/humor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({humor})});
     mostrarToast('Humor registrado: '+humor);
+
+    let painelDashboard = document.getElementById('dashboardPanel');
+    if(painelDashboard && painelDashboard.classList.contains('open')){
+        carregarDashboard();
+    }
+}
+
+
+async function removerHumor(){
+    let confirmar = confirm("Deseja remover o último humor registrado?");
+    if(!confirmar){
+        return;
+    }
+
+    try{
+        let resposta = await fetch("/humor/remover", {
+            method:"POST"
+        });
+
+        let dados = await resposta.json();
+
+        if(dados.status === "ok"){
+            mostrarToast("Última emoção removida.");
+            carregarDashboard();
+        }else{
+            mostrarToast(dados.erro || "Nenhuma emoção para remover.");
+        }
+    }catch(erro){
+        console.log(erro);
+        mostrarToast("Não consegui remover a emoção agora.");
+    }
 }
 
 function toggleDashboard(){
@@ -3432,6 +3467,7 @@ async function carregarDashboard(){
     if(!d.riscos.length){ html += 'Sem dados suficientes.'; }
     d.riscos.forEach(r => html += `${r.nivel}: ${r.total}<br>`);
     html += '</div>';
+    html += '<button class="side-action" onclick="removerHumor()">🗑️ Remover última emoção</button>';
     document.getElementById('dashboardConteudo').innerHTML = html;
 }
 
@@ -3539,8 +3575,8 @@ def apple_touch_icon():
 @app.route("/manifest.json")
 def manifest():
     return jsonify({
-        "name": "CALMi",
-        "short_name": "CALMi",
+        "name": "Calmi AI",
+        "short_name": "Calmi AI",
         "description": "IA emocional inteligente",
         "start_url": "/",
         "scope": "/",
@@ -4548,6 +4584,42 @@ def humor():
 
     dados = request.get_json()
     salvar_humor(session["usuario"], dados.get("humor", "😐 Neutro"), dados.get("observacao", ""))
+    return jsonify({"status":"ok"})
+
+
+
+@app.route("/humor/remover", methods=["POST", "DELETE"])
+def remover_humor():
+    if "usuario" not in session:
+        return jsonify({"status":"erro", "erro":"Você precisa estar logado."}), 401
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        DELETE FROM humor_diario
+        WHERE id = (
+            SELECT id
+            FROM humor_diario
+            WHERE usuario=%s
+            ORDER BY id DESC
+            LIMIT 1
+        )
+        """,
+        (usuario,)
+    )
+
+    removidos = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    if removidos <= 0:
+        return jsonify({"status":"erro", "erro":"Nenhum humor para remover."})
+
     return jsonify({"status":"ok"})
 
 
