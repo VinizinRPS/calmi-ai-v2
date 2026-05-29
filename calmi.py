@@ -3461,32 +3461,6 @@ async function registrarHumor(humor){
 }
 
 
-async function removerHumor(){
-    let confirmar = confirm("Deseja remover o último humor registrado?");
-    if(!confirmar){
-        return;
-    }
-
-    try{
-        let resposta = await fetch("/humor/remover", {
-            method:"POST"
-        });
-
-        let dados = await resposta.json();
-
-        if(dados.status === "ok"){
-            mostrarToast("Última emoção removida.");
-            carregarDashboard();
-        }else{
-            mostrarToast(dados.erro || "Nenhuma emoção para remover.");
-        }
-    }catch(erro){
-        console.log(erro);
-        mostrarToast("Não consegui remover a emoção agora.");
-    }
-}
-
-
 async function removerHumor(id){
     let confirmar = confirm("Deseja remover esta emoção do dashboard?");
     if(!confirmar){
@@ -4701,7 +4675,7 @@ def remover_humor():
 
 
 @app.route("/humor/remover/<int:humor_id>", methods=["POST", "DELETE"])
-def remover_humor(humor_id):
+def remover_humor_dashboard(humor_id):
     if "usuario" not in session:
         return jsonify({"status":"erro", "erro":"Você precisa estar logado."}), 401
 
