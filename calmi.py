@@ -1915,11 +1915,13 @@ body:not(.dark) .chat-search{
     padding:8px 10px;
     border-radius:12px;
     background:#EEF2FF;
+    color:white;
 }
 
 .mood-history-item small{
     color:#64748B;
     margin-left:4px;
+    color:white;
 }
 
 .mood-history-item button{
@@ -1932,6 +1934,7 @@ body:not(.dark) .chat-search{
     font-weight:bold;
     cursor:pointer;
     flex-shrink:0;
+    color:white;
 }
 
 .mood-history-item button:hover{
@@ -1940,6 +1943,7 @@ body:not(.dark) .chat-search{
 
 .dark .mood-history-item{
     background:#111827;
+    color:white;
 }
 
 </style>
