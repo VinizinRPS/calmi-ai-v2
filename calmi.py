@@ -3309,7 +3309,10 @@ function exportarConversa(){
         return;
     }
 
-    let escolhaPdf = confirm("Deseja exportar em PDF?\n\nOK = PDF\nCancelar = TXT");
+    let escolhaPdf = confirm(`Deseja exportar em PDF?
+
+OK = PDF
+Cancelar = TXT`);
 
     window.open(
         (escolhaPdf ? '/exportar_pdf/' : '/exportar/') + conversaAtual,
