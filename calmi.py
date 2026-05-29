@@ -3304,9 +3304,17 @@ async function carregarDashboard(){
 }
 
 function exportarConversa(){
-    if(!conversaAtual){ mostrarToast('Abra uma conversa primeiro.'); return; }
-    let escolhaPdf = confirm('Deseja exportar em PDF?\n\nOK = PDF\nCancelar = TXT');
-    window.open((escolhaPdf ? '/exportar_pdf/' : '/exportar/') + conversaAtual,'_blank');
+    if(!conversaAtual){
+        mostrarToast('Abra uma conversa primeiro.');
+        return;
+    }
+
+    let escolhaPdf = confirm("Deseja exportar em PDF?\n\nOK = PDF\nCancelar = TXT");
+
+    window.open(
+        (escolhaPdf ? '/exportar_pdf/' : '/exportar/') + conversaAtual,
+        '_blank'
+    );
 }
 
 function modoRapido(tipo){
@@ -3316,6 +3324,11 @@ function modoRapido(tipo){
     document.getElementById('mensagem').value = msg;
     enviarMensagem();
 }
+
+window.enviarAuth = enviarAuth;
+window.mudarTab = mudarTab;
+window.toggleMenuMobile = toggleMenuMobile;
+window.toggleTema = toggleTema;
 
 aplicarTemaAutomatico();
 verificarSessao();
