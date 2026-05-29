@@ -416,7 +416,7 @@ def buscar_dashboard(usuario):
 
     cur.execute(
         """
-        SELECT humor, observacao, criado_em
+        SELECT id, humor, observacao, criado_em
         FROM humor_diario
         WHERE usuario=%s
         ORDER BY id DESC
@@ -1904,6 +1904,44 @@ body:not(.dark) .chat-search{
     background:#374151;
 }
 
+
+/* DASHBOARD - REMOVER EMOÇÃO ESPECÍFICA */
+.mood-history-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:8px;
+    padding:8px 10px;
+    border-radius:12px;
+    background:#EEF2FF;
+}
+
+.mood-history-item small{
+    color:#64748B;
+    margin-left:4px;
+}
+
+.mood-history-item button{
+    width:26px;
+    height:26px;
+    border:none;
+    border-radius:50%;
+    background:#EF4444;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+.mood-history-item button:hover{
+    background:#B91C1C;
+}
+
+.dark .mood-history-item{
+    background:#111827;
+}
+
 </style>
 </head>
 <body>
@@ -2056,7 +2094,6 @@ body:not(.dark) .chat-search{
             <button onclick="registrarHumor('😟 Ansioso')">😟 Ansioso</button>
             <button onclick="registrarHumor('😢 Muito mal')">😢 Muito mal</button>
             <button onclick="toggleDashboard(); toggleMenuMobile();">📊 Dashboard Emocional</button>
-            <button onclick="removerHumor(); toggleMenuMobile();">🗑️ Remover emoção</button>
         </div>
     </div>
 
@@ -2162,9 +2199,6 @@ body:not(.dark) .chat-search{
 
             <button class="side-action dashboard-action" onclick="toggleDashboard()">
                 📊 Dashboard Emocional
-            </button>
-            <button class="side-action" onclick="removerHumor()">
-                🗑️ Remover emoção
             </button>
         </div>
 
@@ -3452,6 +3486,32 @@ async function removerHumor(){
     }
 }
 
+
+async function removerHumor(id){
+    let confirmar = confirm("Deseja remover esta emoção do dashboard?");
+    if(!confirmar){
+        return;
+    }
+
+    try{
+        let resposta = await fetch("/humor/remover/" + id, {
+            method:"POST"
+        });
+
+        let dados = await resposta.json();
+
+        if(dados.status === "ok"){
+            mostrarToast("Emoção removida.");
+            carregarDashboard();
+        }else{
+            mostrarToast(dados.erro || "Não consegui remover essa emoção.");
+        }
+    }catch(erro){
+        console.log(erro);
+        mostrarToast("Não consegui remover a emoção agora.");
+    }
+}
+
 function toggleDashboard(){
     document.getElementById('dashboardPanel').classList.toggle('open');
     carregarDashboard();
@@ -3460,14 +3520,31 @@ function toggleDashboard(){
 async function carregarDashboard(){
     let res = await fetch('/dashboard');
     let d = await res.json();
+
     let html = '<div class="dash-card"><strong>Últimos humores</strong><br>';
-    if(!d.humores.length){ html += 'Nenhum humor registrado ainda.'; }
-    d.humores.forEach(h => html += `${h.humor} <small>${h.data}</small><br>`);
+
+    if(!d.humores.length){
+        html += 'Nenhum humor registrado ainda.';
+    }
+
+    d.humores.forEach(h => {
+        html += `
+            <div class="mood-history-item">
+                <span>${h.humor} <small>${h.data}</small></span>
+                <button onclick="removerHumor(${h.id})" title="Remover emoção">×</button>
+            </div>
+        `;
+    });
+
     html += '</div><div class="dash-card"><strong>Níveis emocionais</strong><br>';
-    if(!d.riscos.length){ html += 'Sem dados suficientes.'; }
+
+    if(!d.riscos.length){
+        html += 'Sem dados suficientes.';
+    }
+
     d.riscos.forEach(r => html += `${r.nivel}: ${r.total}<br>`);
     html += '</div>';
-    html += '<button class="side-action" onclick="removerHumor()">🗑️ Remover última emoção</button>';
+
     document.getElementById('dashboardConteudo').innerHTML = html;
 }
 
@@ -4623,6 +4700,35 @@ def remover_humor():
     return jsonify({"status":"ok"})
 
 
+@app.route("/humor/remover/<int:humor_id>", methods=["POST", "DELETE"])
+def remover_humor(humor_id):
+    if "usuario" not in session:
+        return jsonify({"status":"erro", "erro":"Você precisa estar logado."}), 401
+
+    usuario = session["usuario"]
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        DELETE FROM humor_diario
+        WHERE id=%s AND usuario=%s
+        """,
+        (humor_id, usuario)
+    )
+
+    removidos = cur.rowcount
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    if removidos <= 0:
+        return jsonify({"status":"erro", "erro":"Humor não encontrado."})
+
+    return jsonify({"status":"ok"})
+
+
 @app.route("/dashboard")
 def dashboard():
     if "usuario" not in session:
@@ -4631,7 +4737,7 @@ def dashboard():
     humores, riscos = buscar_dashboard(session["usuario"])
     return jsonify({
         "humores": [
-            {"humor": h["humor"], "observacao": h["observacao"], "data": str(h["criado_em"])[:16]}
+            {"id": h["id"], "humor": h["humor"], "observacao": h["observacao"], "data": str(h["criado_em"])[:16]}
             for h in humores
         ],
         "riscos": [
