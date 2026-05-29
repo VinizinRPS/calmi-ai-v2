@@ -1671,38 +1671,51 @@ body{
 
 
 
-/* LOGO CALMI - SITE / APP */
+
+/* AJUSTE FINAL LOGO / SIDEBAR ESCURA */
+.sidebar{
+    width:310px;
+    background:rgba(17,24,39,.95);
+    color:white;
+    border-radius:28px;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 25px 70px rgba(0,0,0,.35);
+}
+
+.logo{
+    text-align:left;
+    padding:18px 0 20px;
+    border-bottom:1px solid rgba(255,255,255,.12);
+}
+
 .brand-logo-card{
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:12px;
+    gap:16px;
     width:100%;
-}
-.logo{
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-text-align:center;
 }
 
 .brand-logo-mark{
-    width:56px;
-    height:56px;
+    width:62px;
+    height:62px;
     border-radius:18px;
     display:flex;
     align-items:center;
     justify-content:center;
     background:linear-gradient(145deg,#4F46E5,#06B6D4);
-    box-shadow:0 12px 28px rgba(37,99,235,.22);
+    box-shadow:0 12px 28px rgba(37,99,235,.25);
     flex-shrink:0;
     overflow:hidden;
 }
 
 .brand-logo-mark svg{
-    width:48px;
-    height:48px;
+    width:54px;
+    height:54px;
+    display:block;
+    transform:translate(0px, 1px) scale(.98);
     filter:drop-shadow(0 5px 7px rgba(0,0,0,.12));
 }
 
@@ -1718,42 +1731,54 @@ text-align:center;
     display:flex;
     flex-direction:column;
     align-items:flex-start;
-    line-height:1.1;
-}
-
-.brand-text h1,
-.brand-text h2{
-    margin:0;
+    line-height:1.05;
 }
 
 .logo .brand-text h1{
-    font-size:38px;
+    margin:0;
+    font-size:42px;
+    background:linear-gradient(135deg,#818CF8,#60A5FA,#22D3EE);
+    -webkit-background-clip:text;
+    color:transparent;
 }
 
 .brand-text p,
 .brand-text span{
-    color:#CBD5E1;
-    font-size:13px;
-    margin-top:6px;
+    color:#E5E7EB;
+    font-size:14px;
+    margin-top:8px;
 }
 
-.login-brand{
+.profile{
+    margin-top:18px;
     display:flex;
-    flex-direction:column;
     align-items:center;
     gap:12px;
-    margin-bottom:16px;
+    background:rgba(31,41,55,.92);
+    padding:13px;
+    border-radius:20px;
 }
 
-.login-brand .brand-logo-mark{
-    width:86px;
-    height:86px;
-    border-radius:28px;
+.quick-panel{
+    margin-top:14px;
+    background:rgba(31,41,55,.88);
+    border-radius:18px;
+    padding:12px;
 }
 
-.login-brand .brand-logo-mark svg{
-    width:76px;
-    height:76px;
+.chat-search{
+    width:100%;
+    margin-top:14px;
+    padding:12px 14px;
+    border:none;
+    border-radius:14px;
+    background:#1F2937;
+    color:white;
+    outline:none;
+}
+
+.chat-search::placeholder{
+    color:#94A3B8;
 }
 
 .mobile-brand{
@@ -1763,14 +1788,14 @@ text-align:center;
 }
 
 .mobile-brand .brand-logo-mark{
-    width:42px;
-    height:42px;
+    width:44px;
+    height:44px;
     border-radius:14px;
 }
 
 .mobile-brand .brand-logo-mark svg{
-    width:37px;
-    height:37px;
+    width:39px;
+    height:39px;
 }
 
 .mobile-brand h2{
@@ -1780,118 +1805,65 @@ text-align:center;
 
 @media(max-width:800px){
     .brand-logo-card{
-        justify-content:flex-start;
+        justify-content:center;
     }
 
     .logo .brand-text h1{
-        font-size:34px;
+        font-size:38px;
     }
 
     .brand-logo-mark{
-        width:52px;
-        height:52px;
-        border-radius:17px;
+        width:58px;
+        height:58px;
     }
 
     .brand-logo-mark svg{
-        width:45px;
-        height:45px;
+        width:51px;
+        height:51px;
+    }
+
+    .mobile-menu{
+        display:flex;
+        flex-direction:column;
+        position:fixed;
+        top:0;
+        left:-86%;
+        width:84%;
+        height:100vh;
+        background:#111827;
+        color:white;
+        z-index:1000;
+        padding:18px;
+        transition:.3s ease;
+        box-shadow:20px 0 60px rgba(0,0,0,.45);
     }
 }
 
-/* Sidebar fixa escura */
-.sidebar,
-.mobile-menu{
-    background:rgba(17,24,39,.95);
-    color:white;
-}
 
-body:not(.dark) .logo{
-    border-bottom:1px solid rgba(15,23,42,.1);
-}
-
-body:not(.dark) .brand-text p,
-body:not(.dark) .brand-text span,
-body:not(.dark) .mobile-profile small{
-    color:#64748B;
+/* Força lateral sempre escura, mesmo no tema claro */
+body:not(.dark) .sidebar,
+body:not(.dark) .mobile-menu{
+    background:#111827 !important;
+    color:white !important;
 }
 
 body:not(.dark) .profile,
 body:not(.dark) .mobile-profile,
 body:not(.dark) .quick-panel,
 body:not(.dark) .chat-item{
-    background:#F1F5F9;
-    color:#0F172A;
+    background:rgba(31,41,55,.92) !important;
+    color:white !important;
+}
+
+body:not(.dark) .brand-text p,
+body:not(.dark) .brand-text span,
+body:not(.dark) .mobile-profile small{
+    color:#E5E7EB !important;
 }
 
 body:not(.dark) .chat-search{
-    background:#E2E8F0;
-    color:#0F172A;
-}
-
-body:not(.dark) .chat-search::placeholder{
-    color:#64748B;
-}
-
-body:not(.dark) .quick-panel h4{
-    color:#1E3A8A;
-}
-
-body:not(.dark) .mood-grid button,
-body:not(.dark) .mode-grid button{
-    background:#E2E8F0;
-    color:#0F172A;
-}
-
-body:not(.dark) .mood-grid button:hover,
-body:not(.dark) .mode-grid button:hover{
-    background:#CBD5E1;
-}
-
-body:not(.dark) .mobile-menu-header h2{
-    color:#2563EB;
-}
-
-body:not(.dark) .profile-actions{
-    background:white;
-    color:#0F172A;
-}
-
-body:not(.dark) .profile-actions button{
-    background:#F1F5F9;
-    color:#0F172A;
-}
-
-body:not(.dark) .profile-actions button:hover{
-    background:#E2E8F0;
-}
-
-body:not(.dark) .profile-actions .danger{
-    background:#FEE2E2;
-    color:#991B1B;
-}
-
-body:not(.dark) .login-box{
-    background:rgba(255,255,255,.96);
-}
-
-body.dark .login-box{
-    background:rgba(17,24,39,.96);
-    color:white;
-}
-
-body.dark .login-box p{
-    color:#CBD5E1;
-}
-
-body.dark .login-box input{
-    background:#1F2937;
-    color:white;
-}
-
-body.dark .tab{
-    background:#1F2937;
-    color:white;
+    background:#1F2937 !important;
+    color:white !important;
 }
 
 </style>
