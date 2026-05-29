@@ -1670,6 +1670,7 @@ body{
 }
 
 
+
 /* LOGO CALMI - SITE / APP */
 .brand-logo-card{
     display:flex;
@@ -1680,24 +1681,30 @@ body{
 }
 
 .brand-logo-mark{
-    width:64px;
-    height:64px;
-    border-radius:22px;
+    width:56px;
+    height:56px;
+    border-radius:18px;
     display:flex;
     align-items:center;
     justify-content:center;
-    background:linear-gradient(145deg,rgba(37,99,235,.95),rgba(79,70,229,.85));
-    box-shadow:
-        0 18px 42px rgba(37,99,235,.35),
-        inset 0 1px 0 rgba(255,255,255,.25);
+    background:linear-gradient(145deg,#4F46E5,#06B6D4);
+    box-shadow:0 12px 28px rgba(37,99,235,.22);
     flex-shrink:0;
     overflow:hidden;
 }
 
 .brand-logo-mark svg{
-    width:58px;
-    height:58px;
-    filter:drop-shadow(0 8px 12px rgba(0,0,0,.18));
+    width:48px;
+    height:48px;
+    filter:drop-shadow(0 5px 7px rgba(0,0,0,.12));
+}
+
+.bubble-main{
+    fill:#3B82F6;
+}
+
+.bubble-second{
+    fill:#2DD4BF;
 }
 
 .brand-text{
@@ -1749,14 +1756,14 @@ body{
 }
 
 .mobile-brand .brand-logo-mark{
-    width:44px;
-    height:44px;
-    border-radius:16px;
+    width:42px;
+    height:42px;
+    border-radius:14px;
 }
 
 .mobile-brand .brand-logo-mark svg{
-    width:40px;
-    height:40px;
+    width:37px;
+    height:37px;
 }
 
 .mobile-brand h2{
@@ -1774,15 +1781,110 @@ body{
     }
 
     .brand-logo-mark{
-        width:58px;
-        height:58px;
-        border-radius:20px;
+        width:52px;
+        height:52px;
+        border-radius:17px;
     }
 
     .brand-logo-mark svg{
-        width:52px;
-        height:52px;
+        width:45px;
+        height:45px;
     }
+}
+
+/* Tema claro aplicado também na lateral/menu */
+body:not(.dark) .sidebar,
+body:not(.dark) .mobile-menu{
+    background:rgba(255,255,255,.96);
+    color:#0F172A;
+}
+
+body:not(.dark) .logo{
+    border-bottom:1px solid rgba(15,23,42,.1);
+}
+
+body:not(.dark) .brand-text p,
+body:not(.dark) .brand-text span,
+body:not(.dark) .mobile-profile small{
+    color:#64748B;
+}
+
+body:not(.dark) .profile,
+body:not(.dark) .mobile-profile,
+body:not(.dark) .quick-panel,
+body:not(.dark) .chat-item{
+    background:#F1F5F9;
+    color:#0F172A;
+}
+
+body:not(.dark) .chat-search{
+    background:#E2E8F0;
+    color:#0F172A;
+}
+
+body:not(.dark) .chat-search::placeholder{
+    color:#64748B;
+}
+
+body:not(.dark) .quick-panel h4{
+    color:#1E3A8A;
+}
+
+body:not(.dark) .mood-grid button,
+body:not(.dark) .mode-grid button{
+    background:#E2E8F0;
+    color:#0F172A;
+}
+
+body:not(.dark) .mood-grid button:hover,
+body:not(.dark) .mode-grid button:hover{
+    background:#CBD5E1;
+}
+
+body:not(.dark) .mobile-menu-header h2{
+    color:#2563EB;
+}
+
+body:not(.dark) .profile-actions{
+    background:white;
+    color:#0F172A;
+}
+
+body:not(.dark) .profile-actions button{
+    background:#F1F5F9;
+    color:#0F172A;
+}
+
+body:not(.dark) .profile-actions button:hover{
+    background:#E2E8F0;
+}
+
+body:not(.dark) .profile-actions .danger{
+    background:#FEE2E2;
+    color:#991B1B;
+}
+
+body:not(.dark) .login-box{
+    background:rgba(255,255,255,.96);
+}
+
+body.dark .login-box{
+    background:rgba(17,24,39,.96);
+    color:white;
+}
+
+body.dark .login-box p{
+    color:#CBD5E1;
+}
+
+body.dark .login-box input{
+    background:#1F2937;
+    color:white;
+}
+
+body.dark .tab{
+    background:#1F2937;
+    color:white;
 }
 
 </style>
@@ -1796,19 +1898,9 @@ body{
         <div class="login-brand">
             
 <div class="brand-logo-mark" aria-hidden="true">
-    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#60A5FA"/>
-                <stop offset="100%" stop-color="#2563EB"/>
-            </linearGradient>
-            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#99F6E4"/>
-                <stop offset="100%" stop-color="#2DD4BF"/>
-            </linearGradient>
-        </defs>
-        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
-        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+    <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
+        <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
@@ -1909,19 +2001,9 @@ body{
         <div class="mobile-brand">
             
 <div class="brand-logo-mark" aria-hidden="true">
-    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#60A5FA"/>
-                <stop offset="100%" stop-color="#2563EB"/>
-            </linearGradient>
-            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#99F6E4"/>
-                <stop offset="100%" stop-color="#2DD4BF"/>
-            </linearGradient>
-        </defs>
-        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
-        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+    <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
+        <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
@@ -1982,19 +2064,9 @@ body{
             <div class="brand-logo-card">
                 
 <div class="brand-logo-mark" aria-hidden="true">
-    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <linearGradient id="calmiBlue" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#60A5FA"/>
-                <stop offset="100%" stop-color="#2563EB"/>
-            </linearGradient>
-            <linearGradient id="calmiMint" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#99F6E4"/>
-                <stop offset="100%" stop-color="#2DD4BF"/>
-            </linearGradient>
-        </defs>
-        <path d="M46 9C23 9 8 23 8 42c0 13 8 24 21 30l-5 14 18-9c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 9 46 9Z" fill="url(#calmiBlue)"/>
-        <path d="M82 30c18 2 30 13 30 29 0 10-6 20-16 25l4 12-15-7c-2 .2-4 .3-6 .3-14 0-26-6-32-16 23-1 41-15 41-34 0-3-.2-6-1-9Z" fill="url(#calmiMint)"/>
+    <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+        <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
+        <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
         <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
@@ -2619,10 +2691,19 @@ function logout(){
     });
 }
 
+
+function atualizarIconeTema(){
+    let botao = document.querySelector(".tema-btn");
+    if(botao){
+        botao.innerText = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    }
+}
+
 function toggleTema(){
 
     document.body.classList.toggle("dark");
     salvarTemaAtual();
+    atualizarIconeTema();
     mostrarToast(document.body.classList.contains("dark") ? "Tema escuro ativado" : "Tema claro ativado");
 }
 
@@ -3334,6 +3415,7 @@ window.toggleMenuMobile = toggleMenuMobile;
 window.toggleTema = toggleTema;
 
 aplicarTemaAutomatico();
+atualizarIconeTema();
 verificarSessao();
 </script>
 
