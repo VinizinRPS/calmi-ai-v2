@@ -1844,7 +1844,7 @@ body:not(.dark) .chat-search{
 
 /* Ajuste fino do rostinho dentro do balão */
 .brand-logo-mark svg{
-    transform:translate(-1px, 0px) scale(1.02);
+    transform:translate(0px,0px) scale(0.92);
 }
 
 </style>
@@ -1862,7 +1862,7 @@ body:not(.dark) .chat-search{
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <!-- rosto centralizado -->
-        <g transform="translate(-6, 0)">
+        <g transform="translate(0, 0)">
             <path d="M35 40 C38 35 45 35 48 40"
             fill="none"
             stroke="white"
@@ -1982,7 +1982,7 @@ body:not(.dark) .chat-search{
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <!-- rosto centralizado -->
-        <g transform="translate(-6, 0)">
+        <g transform="translate(0, 0)">
             <path d="M35 40 C38 35 45 35 48 40"
             fill="none"
             stroke="white"
@@ -2062,7 +2062,7 @@ body:not(.dark) .chat-search{
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
         <!-- rosto centralizado -->
-        <g transform="translate(-6, 0)">
+        <g transform="translate(0, 0)">
             <path d="M35 40 C38 35 45 35 48 40"
             fill="none"
             stroke="white"
