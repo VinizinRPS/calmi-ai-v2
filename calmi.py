@@ -1679,6 +1679,13 @@ body{
     gap:12px;
     width:100%;
 }
+.logo{
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+text-align:center;
+}
 
 .brand-logo-mark{
     width:56px;
@@ -1792,11 +1799,11 @@ body{
     }
 }
 
-/* Tema claro aplicado também na lateral/menu */
-body:not(.dark) .sidebar,
-body:not(.dark) .mobile-menu{
-    background:rgba(255,255,255,.96);
-    color:#0F172A;
+/* Sidebar fixa escura */
+.sidebar,
+.mobile-menu{
+    background:rgba(17,24,39,.95);
+    color:white;
 }
 
 body:not(.dark) .logo{
