@@ -1671,51 +1671,31 @@ body{
 
 
 
-
-/* AJUSTE FINAL LOGO / SIDEBAR ESCURA */
-.sidebar{
-    width:310px;
-    background:rgba(17,24,39,.95);
-    color:white;
-    border-radius:28px;
-    padding:18px;
-    display:flex;
-    flex-direction:column;
-    box-shadow:0 25px 70px rgba(0,0,0,.35);
-}
-
-.logo{
-    text-align:left;
-    padding:18px 0 20px;
-    border-bottom:1px solid rgba(255,255,255,.12);
-}
-
+/* LOGO CALMI - SITE / APP */
 .brand-logo-card{
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:16px;
+    gap:12px;
     width:100%;
 }
 
 .brand-logo-mark{
-    width:62px;
-    height:62px;
+    width:56px;
+    height:56px;
     border-radius:18px;
     display:flex;
     align-items:center;
     justify-content:center;
     background:linear-gradient(145deg,#4F46E5,#06B6D4);
-    box-shadow:0 12px 28px rgba(37,99,235,.25);
+    box-shadow:0 12px 28px rgba(37,99,235,.22);
     flex-shrink:0;
     overflow:hidden;
 }
 
 .brand-logo-mark svg{
-    width:54px;
-    height:54px;
-    display:block;
-    transform:translate(0px, 1px) scale(.98);
+    width:48px;
+    height:48px;
     filter:drop-shadow(0 5px 7px rgba(0,0,0,.12));
 }
 
@@ -1731,54 +1711,42 @@ body{
     display:flex;
     flex-direction:column;
     align-items:flex-start;
-    line-height:1.05;
+    line-height:1.1;
+}
+
+.brand-text h1,
+.brand-text h2{
+    margin:0;
 }
 
 .logo .brand-text h1{
-    margin:0;
-    font-size:42px;
-    background:linear-gradient(135deg,#818CF8,#60A5FA,#22D3EE);
-    -webkit-background-clip:text;
-    color:transparent;
+    font-size:38px;
 }
 
 .brand-text p,
 .brand-text span{
-    color:#E5E7EB;
-    font-size:14px;
-    margin-top:8px;
+    color:#CBD5E1;
+    font-size:13px;
+    margin-top:6px;
 }
 
-.profile{
-    margin-top:18px;
+.login-brand{
     display:flex;
+    flex-direction:column;
     align-items:center;
     gap:12px;
-    background:rgba(31,41,55,.92);
-    padding:13px;
-    border-radius:20px;
+    margin-bottom:16px;
 }
 
-.quick-panel{
-    margin-top:14px;
-    background:rgba(31,41,55,.88);
-    border-radius:18px;
-    padding:12px;
+.login-brand .brand-logo-mark{
+    width:86px;
+    height:86px;
+    border-radius:28px;
 }
 
-.chat-search{
-    width:100%;
-    margin-top:14px;
-    padding:12px 14px;
-    border:none;
-    border-radius:14px;
-    background:#1F2937;
-    color:white;
-    outline:none;
-}
-
-.chat-search::placeholder{
-    color:#94A3B8;
+.login-brand .brand-logo-mark svg{
+    width:76px;
+    height:76px;
 }
 
 .mobile-brand{
@@ -1788,14 +1756,14 @@ body{
 }
 
 .mobile-brand .brand-logo-mark{
-    width:44px;
-    height:44px;
+    width:42px;
+    height:42px;
     border-radius:14px;
 }
 
 .mobile-brand .brand-logo-mark svg{
-    width:39px;
-    height:39px;
+    width:37px;
+    height:37px;
 }
 
 .mobile-brand h2{
@@ -1805,42 +1773,49 @@ body{
 
 @media(max-width:800px){
     .brand-logo-card{
-        justify-content:center;
+        justify-content:flex-start;
     }
 
     .logo .brand-text h1{
-        font-size:38px;
+        font-size:34px;
     }
 
     .brand-logo-mark{
-        width:58px;
-        height:58px;
+        width:52px;
+        height:52px;
+        border-radius:17px;
     }
 
     .brand-logo-mark svg{
-        width:51px;
-        height:51px;
-    }
-
-    .mobile-menu{
-        display:flex;
-        flex-direction:column;
-        position:fixed;
-        top:0;
-        left:-86%;
-        width:84%;
-        height:100vh;
-        background:#111827;
-        color:white;
-        z-index:1000;
-        padding:18px;
-        transition:.3s ease;
-        box-shadow:20px 0 60px rgba(0,0,0,.45);
+        width:45px;
+        height:45px;
     }
 }
 
+/* EMOÇÕES NOMEADAS */
+.mood-grid-named button{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    min-height:62px;
+    padding:10px 6px;
+    font-size:20px;
+}
 
-/* Força lateral sempre escura, mesmo no tema claro */
+.mood-grid-named button small{
+    font-size:10.5px;
+    font-weight:700;
+    opacity:.92;
+    line-height:1;
+}
+
+.dashboard-action{
+    margin-top:12px;
+}
+
+/* Sidebar e menu mobile sempre escuros */
 body:not(.dark) .sidebar,
 body:not(.dark) .mobile-menu{
     background:#111827 !important;
@@ -1866,6 +1841,12 @@ body:not(.dark) .chat-search{
     color:white !important;
 }
 
+
+/* Ajuste fino do rostinho dentro do balão */
+.brand-logo-mark svg{
+    transform:translate(-1px, 0px) scale(1.02);
+}
+
 </style>
 </head>
 <body>
@@ -1880,28 +1861,28 @@ body:not(.dark) .chat-search{
     <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
-        <!-- olho esquerdo -->
-<path d="M34 40 C37 35 44 35 47 40"
-fill="none"
-stroke="white"
-stroke-width="6"
-stroke-linecap="round"/>
+        <!-- rosto centralizado -->
+        <g transform="translate(-6, 0)">
+            <path d="M35 40 C38 35 45 35 48 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
 
-<!-- olho direito -->
-<path d="M58 40 C61 35 68 35 71 40"
-fill="none"
-stroke="white"
-stroke-width="6"
-stroke-linecap="round"/>
+            <path d="M59 40 C62 35 69 35 72 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
 
-<!-- sorriso centralizado -->
-<path d="M45 55 C51 61 59 61 65 55"
-fill="none"
-stroke="white"
-stroke-width="6"
-stroke-linecap="round"/>
-    </svg>
-</div>  
+            <path d="M46 55 C52 61 60 61 66 55"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+        </g>
+</svg>
+</div>
 
             <div>
                 <h1>Calmi</h1>
@@ -2000,10 +1981,27 @@ stroke-linecap="round"/>
     <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
-        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-    </svg>
+        <!-- rosto centralizado -->
+        <g transform="translate(-6, 0)">
+            <path d="M35 40 C38 35 45 35 48 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+
+            <path d="M59 40 C62 35 69 35 72 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+
+            <path d="M46 55 C52 61 60 61 66 55"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+        </g>
+</svg>
 </div>
 
             <h2>Calmi</h2>
@@ -2063,10 +2061,27 @@ stroke-linecap="round"/>
     <svg class="calmi-logo-svg" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
         <path class="bubble-main" d="M46 10C24 10 9 24 9 42c0 13 8 24 21 30l-5 13 17-8c2 .2 4 .3 6 .3 24 0 42-14 42-34S70 10 46 10Z"/>
         <path class="bubble-second" d="M83 32c17 2 28 13 28 28 0 10-6 19-16 24l4 11-15-7c-2 .2-4 .3-6 .3-13 0-24-6-30-15 23-1 40-15 40-33 0-3-.2-5-1-8Z"/>
-        <path d="M31 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M58 40c3-7 13-7 16 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-        <path d="M43 56c8 9 20 9 28 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/>
-    </svg>
+        <!-- rosto centralizado -->
+        <g transform="translate(-6, 0)">
+            <path d="M35 40 C38 35 45 35 48 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+
+            <path d="M59 40 C62 35 69 35 72 40"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+
+            <path d="M46 55 C52 61 60 61 66 55"
+            fill="none"
+            stroke="white"
+            stroke-width="6"
+            stroke-linecap="round"/>
+        </g>
+</svg>
 </div>
 
                 <div class="brand-text">
@@ -2107,14 +2122,41 @@ stroke-linecap="round"/>
 
         <div class="quick-panel">
             <h4>Como você está hoje?</h4>
-            <div class="mood-grid">
-                <button onclick="registrarHumor('😊 Muito bem')">😊</button>
-                <button onclick="registrarHumor('🙂 Bem')">🙂</button>
-                <button onclick="registrarHumor('😐 Neutro')">😐</button>
-                <button onclick="registrarHumor('😔 Mal')">😔</button>
-                <button onclick="registrarHumor('😢 Muito mal')">😢</button>
-                <button onclick="toggleDashboard()">📊</button>
+            <div class="mood-grid mood-grid-named">
+                <button onclick="registrarHumor('😊 Feliz')">
+                    <div>😊</div>
+                    <small>Feliz</small>
+                </button>
+
+                <button onclick="registrarHumor('🙂 Bem')">
+                    <div>🙂</div>
+                    <small>Bem</small>
+                </button>
+
+                <button onclick="registrarHumor('😐 Neutro')">
+                    <div>😐</div>
+                    <small>Neutro</small>
+                </button>
+
+                <button onclick="registrarHumor('😔 Triste')">
+                    <div>😔</div>
+                    <small>Triste</small>
+                </button>
+
+                <button onclick="registrarHumor('😟 Ansioso')">
+                    <div>😟</div>
+                    <small>Ansioso</small>
+                </button>
+
+                <button onclick="registrarHumor('😢 Muito mal')">
+                    <div>😢</div>
+                    <small>Muito mal</small>
+                </button>
             </div>
+
+            <button class="side-action dashboard-action" onclick="toggleDashboard()">
+                📊 Dashboard Emocional
+            </button>
         </div>
 
         <div class="quick-panel">
